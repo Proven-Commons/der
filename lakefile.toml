@@ -1,0 +1,16 @@
+name = "der"
+version = "0.1.0"
+defaultTargets = ["Der", "Spec", "Proofs", "der"]
+
+[[lean_lib]]
+name = "Der"
+
+[[lean_lib]]
+name = "Spec"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_exe]]
+name = "der"
+root = "Main"
