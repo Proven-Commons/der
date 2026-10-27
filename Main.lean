@@ -81,16 +81,21 @@ def integer (s : String) : Option Int :=
   else (decimal s).map fun n => (n : Int)
 
 mutual
-/-- A tree as text. -/
-partial def showTree : Element → String
-  | .prim cls tag c => s!"p{cls}.{tag}.{toHex c}"
-  | .cons cls tag cs => s!"c{cls}.{tag}(" ++ showTrees cs ++ ")"
+/-- A tree as text, after `s`. Each piece is added to the end of one
+    string, so a deep tree takes time linear in its size. -/
+partial def showTreeInto (s : String) : Element → String
+  | .prim cls tag c => s ++ s!"p{cls}.{tag}." ++ toHex c
+  | .cons cls tag cs => showTreesInto (s ++ s!"c{cls}.{tag}(") cs ++ ")"
 
-partial def showTrees : List Element → String
-  | [] => ""
-  | [e] => showTree e
-  | e :: es => showTree e ++ "," ++ showTrees es
+/-- Trees separated by `,`, after `s`. -/
+partial def showTreesInto (s : String) : List Element → String
+  | [] => s
+  | [e] => showTreeInto s e
+  | e :: es => showTreesInto (showTreeInto s e ++ ",") es
 end
+
+/-- A tree as text. -/
+def showTree (e : Element) : String := showTreeInto "" e
 
 /-- Digits at the start of the input, as a number, and what follows. -/
 def readNumber (cs : List Char) : Option (Nat × List Char) :=
