@@ -1,19 +1,19 @@
 # der: reading and writing DER (X.690), proved
 
-DER, the Distinguished Encoding Rules of ASN.1, is how X.509 certificates, ECDSA signatures, PKCS and CMS are written. Every TLS client and every signature checker reads it from bytes someone else chose. DER allows exactly one encoding of each value, and much of its security rests on that. When a reader accepts a second encoding of the same value, a signature can be forged against a lenient checker, or two parsers disagree about what a certificate says. Malformed lengths have also given out-of-bounds reads more than once.
+DER, the Distinguished Encoding Rules of ASN.1, is how X.509 certificates, ECDSA signatures, PKCS and CMS are written. Every TLS client and every signature checker reads it from bytes someone else chose. DER allows exactly one encoding of each value, and much of its security rests on that. When a reader accepts a second encoding of the same value, a signature can be forged against a lenient checker, or two parsers disagree about what a certificate says. Malformed lengths have also given out-of-bounds reads more than once. This first slice gives that guarantee for the framing of every element and for the contents of four types; "What is not proved" lists the types whose contents it does not yet check.
 
 This library reads and writes one DER element, nested to any depth, in Lean:
 
 - identifier octets, with tag numbers of any size (X.690 8.1.2);
 - length octets, definite and in the fewest octets (8.1.3, 10.1);
 - the contents of a primitive element, or the elements of a constructed one;
-- the form, primitive or constructed, that DER gives each universal type, and the contents of BOOLEAN, INTEGER and NULL.
+- the form, primitive or constructed, that DER gives each universal type, and the contents of BOOLEAN, INTEGER, ENUMERATED and NULL.
 
 Machine-checked proofs show:
 
-- **The reader accepts exactly DER.** It accepts an input exactly when the input starts with the DER encoding of an element this slice accepts. It then gives back the element and the octets after it. So it never reads past the end of its input, and every element it gives lies inside its parent's contents.
-- **Each element has one encoding.** Two elements whose encodings start the same input are equal. Writing back what the reader read gives the same octets.
-- **The writer writes DER.** It writes, for every such element, the encoding X.690 gives it.
+- **The reader accepts exactly the encodings of the elements this slice accepts.** It accepts an input exactly when the input starts with the encoding X.690 gives an element this slice accepts, and then gives back the element and the octets after it. So it never reads past the end of its input, and every element it gives lies inside its parent's contents. That is exactly DER for the identifier, length and structure of every element and for the contents of BOOLEAN, INTEGER, ENUMERATED and NULL. For the contents of other types it accepts more than DER does.
+- **One encoding per element, one element per input.** Each element has one encoding the reader accepts, and an input starts with the encoding of at most one element. Writing back what the reader read gives the same octets. For the four checked types this is one encoding per value; for the others, two contents octet strings for the same value are two elements.
+- **The writer writes the encoding.** It writes, for every element, the encoding X.690 gives it, and `Der.valid` says whether this slice accepts the element.
 - **Integers have one encoding.** `readInt` accepts exactly the contents octets X.690 allows for an INTEGER and gives their value. `writeInt` writes them, and each integer has exactly one.
 
 It is tested against a model of X.690 and other implementations; `tests/TEST-RESULTS.md` holds the record. It is a project of [Proven Commons](https://github.com/Proven-Commons/mission), built to the verified bar published there.
@@ -37,27 +37,36 @@ The statements are in `Spec.lean`. The definitions they use are in `Spec/Defs.le
 
 | Claim | Theorem |
 |-------|---------|
-| The writer writes the DER encoding of every element this slice accepts. | `Spec.encode_eq` |
+| The writer writes the encoding X.690 gives every element. | `Spec.encode_eq` |
+| `Der.valid` says whether this slice accepts an element. | `Spec.valid_iff` |
 | The reader accepts exactly a DER encoding of such an element, followed by anything, and gives back the element and what follows. | `Spec.decode_iff` |
-| Two such elements whose encodings start the same input are the same, and so is what follows. | `Spec.encoding_unique` |
+| An input starts with the encoding of at most one element this slice accepts: two whose encodings start the same input are the same, and so is what follows. | `Spec.encoding_unique` |
 | Reading what the writer wrote gives back the element. | `Spec.decode_encode` |
 | The whole input is one element exactly when it is such an encoding. | `Spec.decodeAll_iff` |
 | `readInt` accepts exactly the contents of an INTEGER that X.690 allows, and gives the integer. | `Spec.readInt_iff` |
 | `writeInt` writes such contents for the integer, and they are the only ones. | `Spec.writeInt_spec`, `Spec.writeInt_unique` |
-| X.690's examples: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5. Seventeen inputs that each break one rule are refused, among them the two constructed forms of "Jones". | `Spec.x690_examples`, `Spec.x690_rejects` |
+| X.690's examples: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5, with a tag number of 201 in the high form worked by hand. Nineteen inputs that each break a rule are refused, among them the two constructed forms of "Jones". | `Spec.x690_examples`, `Spec.x690_rejects` |
 
-The elements this slice accepts, `Spec.Valid`, are those whose class is one of the four, whose lengths fit in at most 126 length octets, and whose universal tags follow the rules of `SPEC.md`:
+The elements this slice accepts, `Spec.Valid`, are those whose class is one of the four, whose length octets have at most 126 octets after the first, and whose universal tags follow the rules of `SPEC.md`:
 
 - tag 0 is not used;
 - 8, 11, 16, 17 and 29 are constructed;
 - 15 and 37 and up may be either;
 - every other universal tag is primitive;
-- a BOOLEAN is 00 or FF, an INTEGER is in the fewest octets, and a NULL is empty.
+- a BOOLEAN is 00 or FF, an INTEGER or ENUMERATED is in the fewest octets, and a NULL is empty.
 
 ## What is not proved
 
-- **The contents of other types.** BIT STRING unused bits, OBJECT IDENTIFIER subidentifiers, the string types, the times and REAL are read as octets and not checked. ECDSA-Sig-Value is the second slice.
-- **Rules that depend on the ASN.1 type.** DER orders the components of a SET by tag (10.3) and of a SET OF by encoding (11.6), and leaves out components equal to their default (11.5). A reader with no schema cannot check these, so this one does not.
+- **The contents of other types.** These are read as octets and not checked, so the reader accepts encodings DER forbids, and more than one encoding of the same value:
+  - REAL (8.5, 11.3);
+  - BIT STRING: the initial octet and unused bits (8.6.2, 11.2.1);
+  - OBJECT IDENTIFIER and RELATIVE-OID subidentifiers (8.19.2, 8.20.2), and the IRI types (8.21.2, 8.22.2);
+  - the string types: UTF-8 in the fewest octets (8.23.10), BMPString and UniversalString lengths (8.23.7, 8.23.8), GeneralString escapes (11.4);
+  - UTCTime and GeneralizedTime (11.7, 11.8), and TIME and its subtypes (8.26, 11.9);
+  - the components of EXTERNAL, EMBEDDED PDV and CHARACTER STRING (8.16 to 8.18, 8.24), so even an empty one is accepted.
+
+  ECDSA-Sig-Value is the second slice.
+- **Rules that depend on the ASN.1 type.** DER orders the components of a SET by tag (10.3) and of a SET OF by encoding (11.6), leaves out components equal to their default (11.5), and drops trailing zero bits from a named bit list (11.2.2). Without a schema, only a weak condition on a SET can be checked: its components are either in tag order or in encoding order. This slice does not check even that.
 - **Time and memory.** No proof bounds them. The reader is written to take time linear in its input: it never measures more of the input than an element's length, and it adds up long tag numbers and lengths by halves. Its recursion depth is the nesting depth. The tests time deep and long inputs.
 - **Reading requests and printing answers in `Main.lean`.** The differential tests cover them.
 

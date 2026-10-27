@@ -19,7 +19,9 @@
     decode HEX      prints  OK, the tree and the hex of the rest, or FAIL
                                                           (decode)
     all HEX         prints  OK and the tree, or FAIL      (decodeAll)
-    encode TREE     prints  OK and the hex                (encode)
+    encode TREE     prints  OK and the hex, for any tree  (encode)
+    valid TREE      prints  OK when this slice accepts the tree, else
+                            FAIL                          (valid)
     readint HEX     prints  OK and the integer, or FAIL   (readInt)
     writeint INT    prints  OK and the hex                (writeInt)
 
@@ -159,6 +161,9 @@ def request (line : String) : Option String :=
   | ["encode", t] => do
     let e ← treeField t
     pure s!"OK {toHex (encode e)}"
+  | ["valid", t] => do
+    let e ← treeField t
+    pure (if valid e then "OK" else "FAIL")
   | ["readint", h] => do
     let c ← fromHex h
     pure (match readInt c with

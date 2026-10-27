@@ -64,21 +64,34 @@ theorem der_length_ge (v : Element) : 2 ≤ (Spec.der v).length := by
     omega
 
 mutual
-theorem encode_eq' : ∀ v : Element, Spec.Valid v → encode v = Spec.der v
-  | .prim cls tag c, h => by
-    rw [valid_prim] at h
+theorem encode_eq' : ∀ v : Element, encode v = Spec.der v
+  | .prim cls tag c => by
     rw [der_prim]
-    simp only [encode, identOctets_eq _ _ _ h.1, lengthOctets_eq]
-  | .cons cls tag cs, h => by
-    rw [valid_cons] at h
+    simp only [encode, identOctets_eq, lengthOctets_eq]
+  | .cons cls tag cs => by
     rw [der_cons]
-    simp only [encode, identOctets_eq _ _ _ h.1, lengthOctets_eq, encodeList_eq cs h.2.2.1]
-theorem encodeList_eq : ∀ vs : List Element, Spec.ValidList vs → encodeList vs = Spec.derList vs
-  | [], _ => by simp [encodeList, derList_nil]
-  | v :: vs, h => by
-    rw [validList_cons] at h
+    simp only [encode, identOctets_eq, lengthOctets_eq, encodeList_eq cs]
+theorem encodeList_eq : ∀ vs : List Element, encodeList vs = Spec.derList vs
+  | [] => by simp [encodeList, derList_nil]
+  | v :: vs => by
     rw [derList_cons]
-    simp only [encodeList, encode_eq' v h.1, encodeList_eq vs h.2]
+    simp only [encodeList, encode_eq' v, encodeList_eq vs]
+end
+
+mutual
+theorem valid_iff' : ∀ v : Element, valid v = true ↔ Spec.Valid v
+  | .prim cls tag c => by
+    rw [valid_prim]
+    simp only [valid, Bool.and_eq_true, decide_eq_true_eq, primOk_iff, and_assoc]
+  | .cons cls tag cs => by
+    rw [valid_cons]
+    simp only [valid, Bool.and_eq_true, decide_eq_true_eq, consOk_iff, validList_iff' cs,
+      encodeList_eq cs, and_assoc]
+theorem validList_iff' : ∀ vs : List Element, validList vs = true ↔ Spec.ValidList vs
+  | [] => by simp [validList, Spec.ValidList]
+  | v :: vs => by
+    rw [validList_cons]
+    simp only [validList, Bool.and_eq_true, valid_iff' v, validList_iff' vs]
 end
 
 theorem readElements_zero (f : Nat) (b : List UInt8) : readElements f 0 b = some ([], b) := by
@@ -278,7 +291,7 @@ theorem encoding_unique' (v w : Element) (r s : List UInt8) (hv : Spec.Valid v) 
 
 theorem decode_encode' (v : Element) (rest : List UInt8) (h : Spec.Valid v) :
     decode (encode v ++ rest) = some (v, rest) := by
-  rw [encode_eq' v h]
+  rw [encode_eq' v]
   exact (decode_iff' _ _ _).mpr ⟨h, rfl⟩
 
 theorem decodeAll_iff' (b : List UInt8) (v : Element) :

@@ -16,7 +16,8 @@ entry_points = ["Main.lean"]
 [spec]
 files = ["SPEC.md", "Spec.lean", "Spec/Defs.lean", "Spec/Element.lean"]
 # The code under proof: the functions the statements are about.
-code = ["Der.encode", "Der.decode", "Der.decodeAll", "Der.readInt", "Der.writeInt"]
+code = ["Der.encode", "Der.decode", "Der.decodeAll", "Der.valid", "Der.readInt",
+        "Der.writeInt"]
 
 # One entry per approval, added in a pull request the reviewer approves.
 # [[spec.approval]]

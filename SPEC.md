@@ -6,7 +6,7 @@ DER, the Distinguished Encoding Rules of ASN.1 (Rec. ITU-T X.690, https://www.it
 - its length octets, in the definite form and the fewest octets (8.1.3, 10.1);
 - its contents: octets for a primitive element, and the elements they encode for a constructed one (8.1.4).
 
-It checks the contents of three universal types, BOOLEAN, INTEGER and NULL, and the form (primitive or constructed) of every universal type. The contents of other types (BIT STRING, OBJECT IDENTIFIER, strings, times, REAL) are a later slice. So is the order of SET components, which depends on the ASN.1 type.
+It checks the contents of four universal types, BOOLEAN, INTEGER, ENUMERATED and NULL, and the form (primitive or constructed) of every universal type. The contents of other types (REAL, BIT STRING, OBJECT IDENTIFIER, RELATIVE-OID, the IRI types, the strings, the times, and the components of EXTERNAL, EMBEDDED PDV and CHARACTER STRING) are a later slice, and `Spec/Defs.lean` lists the clauses it leaves unchecked. So is the order of SET components, which depends on the ASN.1 type.
 
 A reviewer who did not write this specification approves it. The approval also covers `Spec.lean`, `Spec/Defs.lean`, `Spec/Element.lean`, and the other files that `bar.toml` lists.
 
@@ -26,11 +26,13 @@ A reviewer who did not write this specification approves it. The approval also c
 - the length fits the long form, whose first octet may not be all ones (8.1.3.5 c), so at most 126 octets follow it;
 - in the universal class, tag 0 is not used (X.680 Table 1 reserves it for the encoding rules, and DER has no end-of-contents octets);
 - tags 8, 11, 16, 17 and 29 (external, embedded-pdv, sequence, set, character string) are constructed, tags 15 and 37 and up (reserved in X.680) may be either, and every other universal tag is primitive, as clauses 8 and 10.2 require;
-- a BOOLEAN's contents are 00 or FF (8.2, 11.1), an INTEGER's are one or more octets in the fewest (8.3.1, 8.3.2), and a NULL's are empty (8.8.2).
+- a BOOLEAN's contents are 00 or FF (8.2, 11.1), an INTEGER's are one or more octets in the fewest (8.3.1, 8.3.2), and so are an ENUMERATED's, since it is encoded as its integer (8.4), and a NULL's are empty (8.8.2).
 
-**The writer** writes `Spec.der` for every tree this slice accepts.
+`Spec.der v` is a DER encoding of `v` exactly when `Spec.Valid v` holds and the contents of the types this slice does not check are as DER asks. For a tree outside `Spec.Valid`, `Spec.der` still gives octets, but the reader does not read them back as that tree.
 
-**The reader** accepts exactly the octet strings that start with `Spec.der` of a tree this slice accepts, and gives back the tree and the octets after it. Since `Spec.der` puts each element's encoding inside its parent's contents, every element the reader gives lies inside its parent, and the reader never reads past the end of its input. Since the reader is a function, each tree has one encoding it accepts: DER's main property. Reading the whole input as one element is the same with nothing after it.
+**The writer** writes `Spec.der` for every tree. `Der.valid` says whether a tree is in `Spec.Valid`.
+
+**The reader** accepts exactly the octet strings that start with `Spec.der` of a tree this slice accepts, and gives back the tree and the octets after it. Since `Spec.der` puts each element's encoding inside its parent's contents, every element the reader gives lies inside its parent, and the reader never reads past the end of its input. Since `Spec.der` is a function, each tree has one encoding the reader accepts; since the reader is a function, each input starts with the encoding of at most one tree (`encoding_unique`). For BOOLEAN, INTEGER, ENUMERATED and NULL that is one encoding per value. For the contents of other types it is not: two contents octet strings that encode the same value, one of which DER forbids, are two trees here. Reading the whole input as one element is the same with nothing after it.
 
 ## Integers
 
@@ -44,7 +46,8 @@ Each property is a theorem in `Spec.lean`, under the name given.
 
 | Property | Theorem |
 |----------|---------|
-| The writer writes the DER encoding of every tree this slice accepts. | `Spec.encode_eq` |
+| The writer writes `Spec.der` for every tree. | `Spec.encode_eq` |
+| `Der.valid` says whether a tree is in `Spec.Valid`. | `Spec.valid_iff` |
 | The reader accepts exactly an encoding of such a tree followed by anything, and gives back the tree and what follows. | `Spec.decode_iff` |
 | Two trees with encodings at the start of the same input are the same, and so is what follows. | `Spec.encoding_unique` |
 | Reading what the writer wrote gives back the tree. | `Spec.decode_encode` |
@@ -52,8 +55,8 @@ Each property is a theorem in `Spec.lean`, under the name given.
 | `readInt` accepts exactly the allowed contents of an integer and gives its value. | `Spec.readInt_iff` |
 | `writeInt` writes allowed contents for the integer. | `Spec.writeInt_spec` |
 | Allowed contents are what `writeInt` writes for their value. | `Spec.writeInt_unique` |
-| The examples of X.690: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5. | `Spec.x690_examples` |
-| Seventeen inputs that break one rule each, among them the two constructed forms of "Jones", which DER forbids. | `Spec.x690_rejects` |
+| The examples of X.690: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5; and a tag number of 201 in the high form, worked by hand. | `Spec.x690_examples` |
+| Nineteen inputs that each break a rule, among them the two constructed forms of "Jones", which DER forbids. | `Spec.x690_rejects` |
 
 ## The command-line tool
 

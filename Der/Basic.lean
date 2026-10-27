@@ -134,14 +134,15 @@ def intOk : List UInt8 → Bool
   | a :: b :: _ => !(a.toNat == 255 && 128 ≤ b.toNat) && !(a.toNat == 0 && b.toNat < 128)
 
 /-- Whether the contents of a primitive universal element are allowed:
-    a boolean is 0 or all ones (8.2, 11.1), an integer is in the fewest
-    octets (8.3), and a null is empty (8.8.2). Other types are not
-    checked in this slice. -/
+    a boolean is 0 or all ones (8.2, 11.1), an integer or an enumerated
+    value is in the fewest octets (8.3, 8.4), and a null is empty
+    (8.8.2). Other types are not checked in this slice. -/
 def contentsOk (tag : Nat) (c : List UInt8) : Bool :=
   match tag with
   | 1 => c == [0] || c == [255]
   | 2 => intOk c
   | 5 => c.isEmpty
+  | 10 => intOk c
   | _ => true
 
 /-- Whether a primitive element's tag and contents are allowed: in the
@@ -208,6 +209,20 @@ def decodeAll (b : List UInt8) : Option Element :=
   match decode b with
   | some (e, []) => some e
   | _ => none
+
+mutual
+/-- Whether this slice accepts an element: whether `decode` would read
+    back what `encode` writes for it. -/
+def valid : Element → Bool
+  | .prim cls tag c => cls < 4 && primOk cls tag c && c.length < 256 ^ 126
+  | .cons cls tag cs =>
+    cls < 4 && consOk cls tag && validList cs && (encodeList cs).length < 256 ^ 126
+
+/-- Whether this slice accepts each element of a list. -/
+def validList : List Element → Bool
+  | [] => true
+  | e :: es => valid e && validList es
+end
 
 /-! ## Integers -/
 

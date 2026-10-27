@@ -365,16 +365,23 @@ theorem readLength_sound {b : List UInt8} {n m : Nat} {rest : List UInt8}
             · rw [lengthOctets_long _ (by omega), hdig]
               simp only [List.length_cons, List.length_map, hk']
 
-theorem identOctets_eq (cls : Nat) (c : Bool) (tag : Nat) (hcls : cls < 4) :
+/-- Only the class modulo 4 reaches the octet, so the code's `cls % 4`
+    and the specification's `cls` give the same octet. -/
+theorem lead_octet (cls : Nat) (c : Bool) (k : Nat) :
+    (cls % 4 * 64 + (if c then 32 else 0) + k).toUInt8 = (Spec.classAndForm cls c + k).toUInt8 := by
+  apply UInt8.toNat_inj.mp
+  rw [classAndForm_eq]
+  simp only [Nat.toUInt8]
+  cases c <;> simp <;> omega
+
+theorem identOctets_eq (cls : Nat) (c : Bool) (tag : Nat) :
     identOctets cls c tag = Spec.identifier cls c tag := by
   unfold identOctets
-  rw [Nat.mod_eq_of_lt hcls]
   by_cases ht : tag < 31
   · rw [identifier_low cls c tag (by omega)]
-    simp only [ht, ↓reduceIte]
-    rfl
+    simp only [ht, ↓reduceIte, lead_octet]
   · rw [identifier_high cls c tag (by omega)]
-    simp only [ht, ↓reduceIte]
+    simp only [ht, ↓reduceIte, lead_octet]
     rw [toDigits_eq 7 (by omega), two_pow_seven]
     rfl
 
@@ -414,15 +421,18 @@ theorem reservedUniversal_iff (tag : Nat) :
 
 theorem contentsOk_iff (tag : Nat) (c : List UInt8) :
     contentsOk tag c = true ↔
-      (tag = 1 → c = [0] ∨ c = [255]) ∧ (tag = 2 → Spec.IntegerContents c) ∧ (tag = 5 → c = []) := by
+      (tag = 1 → c = [0] ∨ c = [255]) ∧ (tag = 2 ∨ tag = 10 → Spec.IntegerContents c) ∧
+        (tag = 5 → c = []) := by
   unfold contentsOk
   split
   · simp
   · simp [intOk_iff]
   · simp [List.isEmpty_iff]
-  · rename_i h1 h2 h5
+  · simp [intOk_iff]
+  · rename_i h1 h2 h5 h10
     simp only [true_iff]
-    exact ⟨fun h => absurd h h1, fun h => absurd h h2, fun h => absurd h h5⟩
+    exact ⟨fun h => absurd h h1, fun h => h.elim (absurd · h2) (absurd · h10),
+      fun h => absurd h h5⟩
 
 theorem primOk_iff (cls tag : Nat) (c : List UInt8) :
     primOk cls tag c = true ↔ Spec.PrimitiveOk cls tag c := by

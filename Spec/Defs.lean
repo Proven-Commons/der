@@ -73,7 +73,7 @@ mutual
     contents octets (8.1.1.1). With the definite form there are no
     end-of-contents octets (8.1.5). The contents octets of a constructed
     element are the encodings of its elements, one after another
-    (8.1.1.1 b, 8.9.2, 8.10.2). -/
+    (8.1.1.1 c, 3.2, 8.9.2, 8.10.2). -/
 def der : Element → List UInt8
   | .prim cls tag c => identifier cls false tag ++ lengthOctets c.length ++ c
   | .cons cls tag cs => identifier cls true tag ++ lengthOctets (derList cs).length ++ derList cs
@@ -128,25 +128,33 @@ def ReservedUniversal (tag : Nat) : Prop := tag = 15 ∨ 37 ≤ tag
     - the five numbers of `ConstructedUniversal` are not primitive;
     - a boolean has one contents octet (8.2.1), 0 for false (8.2.2) and
       all ones for true (11.1);
-    - an integer has the contents `IntegerContents` describes (8.3);
+    - an integer has the contents `IntegerContents` describes (8.3), and
+      so has an enumerated value, which is encoded as its integer (8.4);
     - a null has no contents octets (8.8.2).
 
     Every other universal type is primitive in DER: by 8.2.1, 8.3.1,
     8.4, 8.5.1, 8.8.1, 8.19.1, 8.20.1, 8.21.1, 8.22.1 and 8.26, and for
     bit strings, octet strings and the restricted character strings,
     with the useful types defined from them (8.25), by 10.2. This slice
-    checks the contents of no other type. -/
+    checks the contents of no other type: not those of 8.5 and 11.3
+    (REAL), 8.6.2 and 11.2.1 (BIT STRING), 8.19.2 (OBJECT IDENTIFIER),
+    8.20.2 (RELATIVE-OID), 8.21.2 and 8.22.2 (the IRI types), 8.23.7,
+    8.23.8, 8.23.10 and 11.4 (strings), 11.7 and 11.8 (the useful time
+    types), or 8.26 and 11.9 (TIME and its subtypes). -/
 def PrimitiveOk (cls tag : Nat) (c : List UInt8) : Prop :=
   cls = 0 →
     tag ≠ 0 ∧ ¬ ConstructedUniversal tag ∧
       (tag = 1 → c = [0] ∨ c = [255]) ∧
-      (tag = 2 → IntegerContents c) ∧
+      (tag = 2 ∨ tag = 10 → IntegerContents c) ∧
       (tag = 5 → c = [])
 
 /-- What this slice requires of the tag of a constructed element: in the
     universal class, one of the five numbers of `ConstructedUniversal`,
     or a reserved number. Every other universal type is primitive in DER
-    (see `PrimitiveOk`). -/
+    (see `PrimitiveOk`). The elements inside are not checked against the
+    type: not the components of 8.16 to 8.18 and 8.24 for tags 8, 11
+    and 29, nor the order of a set's components (10.3, 11.6), which
+    depends on whether it is a SET or a SET OF. -/
 def ConstructedOk (cls tag : Nat) : Prop :=
   cls = 0 → ConstructedUniversal tag ∨ ReservedUniversal tag
 
