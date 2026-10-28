@@ -10,8 +10,9 @@ namespace Der
 /-- One element of an encoding (X.690 8.1.1): its tag, given by a class
     and a number (8.1.2), and its contents (8.1.4).
 
-    The class is 0 for universal, 1 for application, 2 for
-    context-specific and 3 for private, as in Table 1 of X.690.
+    The class can be any number in the type. Table 1 of X.690 has four:
+    0 for universal, 1 for application, 2 for context-specific and 3
+    for private. `Spec.Valid` accepts only these four.
 
     A primitive element holds its contents octets. A constructed element
     holds the elements its contents octets encode, in order. -/

@@ -52,7 +52,7 @@ def lengthOctets (n : Nat) : List UInt8 :=
     (128 + ds.length).toUInt8 :: ds.map Nat.toUInt8
 
 mutual
-/-- The DER encoding of an element. -/
+/-- The encoding of an element, as `Spec.der` writes it. -/
 def encode : Element → List UInt8
   | .prim cls tag c => identOctets cls false tag ++ lengthOctets c.length ++ c
   | .cons cls tag cs =>

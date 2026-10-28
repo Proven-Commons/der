@@ -12,7 +12,7 @@ A reviewer who did not write this specification approves it. The approval also c
 
 ## Elements
 
-`Spec/Element.lean` gives the tree: an element is primitive, with a class, a tag number and contents octets, or constructed, with a class, a tag number and a list of elements. The class is 0 (universal), 1 (application), 2 (context-specific) or 3 (private), as in Table 1 of X.690.
+`Spec/Element.lean` gives the tree: an element is primitive, with a class, a tag number and contents octets, or constructed, with a class, a tag number and a list of elements. The class can be any number in the type. Table 1 of X.690 has four classes, 0 (universal), 1 (application), 2 (context-specific) and 3 (private), and `Spec.Valid` accepts only these.
 
 `Spec/Defs.lean` writes the DER encoding of a tree, `Spec.der`, from X.690:
 

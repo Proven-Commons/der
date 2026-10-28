@@ -18,8 +18,10 @@ open Der
 
 /-! ## Elements -/
 
-/-- The writer writes `der v` for every tree. That is a DER encoding of
-    `v` exactly when this slice accepts `v`: see `decode_iff`. -/
+/-- The writer writes `der v` for every tree. When this slice accepts
+    `v`, the reader reads it back (see `decode_iff`), and it is the DER
+    encoding of `v`, apart from the contents of the types this slice does
+    not check. -/
 theorem encode_eq (v : Element) : Der.encode v = der v := sorry
 
 /-- `Der.valid` says whether this slice accepts an element. -/

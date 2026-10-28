@@ -43,8 +43,9 @@ checked two ways.
 
    - Go cryptobyte: golang.org/x/crypto/cryptobyte, at the version
      tests/oracles/go/go.mod pins (go.sum holds its hash);
-   - Go encoding/asn1: the standard library's package, built by the
-     same Go;
+   - Go encoding/asn1: the standard library's package of the installed
+     Go, which builds both Go oracles. It is not pinned; the record
+     gives the Go version;
    - rust-asn1: the `asn1` crate, at the version and checksum
      tests/oracles/rust/Cargo.lock pins, built with `cargo --locked`;
    - OpenSSL: libcrypto, the version OPENSSL_PINNED, through
@@ -52,10 +53,12 @@ checked two ways.
 
    Each reads elements with the package's own reader and walks a
    constructed element's contents element by element, checks a
-   universal BOOLEAN, INTEGER and NULL with the package's own readers
-   for them, and prints the tree in the syntax of `der serve` (the
-   program in each oracle's folder says how). The programs check no
-   ENUMERATED contents. Each answers `decode`, `all`, `readint` and
+   universal BOOLEAN and INTEGER with the package's own readers for
+   them, and prints the tree in the syntax of `der serve` (the program
+   in each oracle's folder says how). The programs for encoding/asn1,
+   rust-asn1 and OpenSSL also check a NULL; cryptobyte has no reader
+   for NULL. Only the OpenSSL program checks ENUMERATED contents, with
+   d2i_ASN1_ENUMERATED. Each answers `decode`, `all`, `readint` and
    `writeint` (rust-asn1 gives a value only within 64 bits), and no
    `encode` or `valid`. An oracle that cannot be built or started
    is left out, and the record says so on its `- Oracles left out:`
@@ -73,16 +76,24 @@ checked two ways.
      checks the form only of BOOLEAN, INTEGER and NULL;
    - rust-asn1 reads tag numbers and lengths up to 2^32 - 1, and checks
      the form only of BOOLEAN, INTEGER and NULL;
-   - OpenSSL reads BER: the indefinite length for a constructed element,
-     to end-of-contents octets 00 00; lengths not in the fewest octets,
-     even after the initial octet 0xFF, of at most 8 significant octets
-     and when one more octet follows them; tag numbers in any high
-     form, up to 2^31 - 1; and any single octet as a BOOLEAN. It checks
-     the form only of BOOLEAN, INTEGER and NULL.
-   None of them refuses universal tag 0, and none of the programs
-   checks the contents of an ENUMERATED. The record also counts, for each
-   oracle, the elements whose answer `read` gives with its rules, whether
-   or not it agrees with the tool.
+   - OpenSSL reads what BER allows and DER does not: the indefinite
+     length for a constructed element, to end-of-contents octets 00 00;
+     lengths not in the fewest octets, of at most 8 significant octets
+     and when one more octet follows them; and any single octet as a
+     BOOLEAN. Beyond BER, it also reads encodings that BER forbids as
+     well: the initial length octet 0xFF (8.1.3.5 c), its length read
+     as above, and tag numbers below 31 in the high form (8.1.2.2) or
+     with a first subsequent octet 0x80 (8.1.2.4.2 c). It reads tag
+     numbers up to 2^31 - 1. It checks the form only of BOOLEAN,
+     INTEGER, ENUMERATED and NULL, so it reads the other universal types
+     in either form, though BER allows the constructed form only for
+     the string types and the types encoded as strings (8.6, 8.7, 8.23,
+     and ObjectDescriptor, UTCTime and GeneralizedTime, 8.25).
+   The Go and Rust programs check no ENUMERATED contents. None of the
+   oracles refuses universal tag 0. Beyond that, for every element
+   an oracle reads (`decode` and `all`), `read` with its rules must give
+   its answer, whether or not it agrees with the tool; any element on
+   which it does not is a failure.
 
 Inputs come from a recorded seed, after fixed sets:
 
@@ -93,10 +104,12 @@ Inputs come from a recorded seed, after fixed sets:
 - every identifier first octet, with subsequent tag octets when it
   takes them, and short contents;
 - every initial length octet 0x80 to 0xFF, with several subsequent
-  octets and contents;
+  octets and contents; and lengths of 5 to 126 octets that a reader
+  skipping leading zero octets, or keeping the length modulo 2^32 or
+  2^64, would fit to the contents after them;
 - lengths 0 to 100,000 around 127, 128, 255, 256, 65535 and 65536:
   whole, cut short, with the length one more and one less, not in the
-  fewest octets, and inside a SEQUENCE;
+  fewest octets (up to 126 length octets), and inside a SEQUENCE;
 - tag numbers around 31, 127, 128, 16383, 16384, 2^21, 2^28, 2^31,
   2^32, 2^63 and 2^64, and one of 1,000 subsequent octets, in each
   class and form, cut short and with a first subsequent octet 0x80;
@@ -107,9 +120,11 @@ Inputs come from a recorded seed, after fixed sets:
   the same contents read as an ENUMERATED;
 - chains nested 10,000 and 100,000 deep: whole, with octets after, with
   mixed classes and tags, with a bad BOOLEAN inside, with one element
-  running past the one around it, and cut short. Each goes to a `der
-  serve` of its own, which must answer within DEEP_BUDGET seconds; the
-  10,000 deep ones are also encoded;
+  running past the one around it, and cut short; the 10,000 deep ones
+  are also encoded. Chains 1,000 deep, one the slice accepts and one
+  with a bad BOOLEAN inside, are asked `valid`. Each of these requests
+  goes to a `der serve` of its own, which must answer within
+  DEEP_BUDGET seconds;
 - every signature of the Wycheproof vectors in
   tests/wycheproof/ecdsa_secp256r1_sha256_test.json, whose SHA-256 is
   checked first, read with `all`. The record says how many of those
@@ -118,17 +133,20 @@ Inputs come from a recorded seed, after fixed sets:
 - random trees the slice accepts, of every class, with tags in both
   forms, up to 6 levels and 8 elements in a constructed one, encoded by
   the model and read whole, with octets after, and mutated: an
-  element's length one more or one less, not in the fewest octets or
+  element's length one more or one less, not in the fewest octets (in
+  the long form below 128, or with 1 to 125 leading zero octets) or
   indefinite, its tag in the high form below 31 or with a first
   subsequent octet 0x80, its constructed bit flipped, its length too
   short for the elements in it, so that the last runs past it, its
-  BOOLEAN, INTEGER or NULL contents changed; and the whole encoding with
-  a bit flipped or cut short.
+  BOOLEAN, INTEGER, ENUMERATED or NULL contents changed; and the whole
+  encoding with a bit flipped or cut short.
   Each tree is also encoded, and the model reads the tool's encoding
   back as the tree. Each is asked `valid`, and so is a copy with one
   element the slice does not accept: of a class from 4 to 7, universal
-  tag 0, a universal type in the wrong form, or BOOLEAN, INTEGER,
-  ENUMERATED or NULL contents DER forbids; that copy is also encoded;
+  tag 0, a universal type in the wrong form (never a reserved number,
+  which may take either), or BOOLEAN, INTEGER, ENUMERATED or NULL
+  contents DER forbids. The model checks that it does not accept that
+  copy, which is also encoded;
 - random octet strings; `readint` on random contents; `writeint` on
   integers from -300 to 300, around plus and minus 2^k for k up to
   1,000, and random ones of up to 4,096 bits;
@@ -181,8 +199,8 @@ OPENSSL_PINNED = "3.0.13"
 RESULTS = TESTS / "TEST-RESULTS.md"
 TIMEOUT = 3600
 BUILD_TIMEOUT = 3600
-# A request nested 10,000 or 100,000 deep goes to a `der serve` of its
-# own, which must answer it within this many seconds.
+# A request nested 1,000, 10,000 or 100,000 deep goes to a `der serve`
+# of its own, which must answer it within this many seconds.
 DEEP_BUDGET = 60
 # The other requests are split among this many `der serve` processes.
 JOBS = max(1, min(4, os.cpu_count() or 1))
@@ -246,7 +264,7 @@ class Rules:
     high_form: bool = True             # reads tag numbers of 31 and more
     lenient_tags: bool = False         # reads any high form, even below 31 or from 0x80
     max_tag: int = None                # the largest tag number read
-    ber_lengths: bool = False          # OpenSSL's BER lengths, with the indefinite form
+    ber_lengths: bool = False          # OpenSSL's lengths: BER's, and after the octet 0xFF
     max_length: int = None             # the largest length read
     checked_forms: frozenset = None    # universal numbers whose form is checked; None: all
     universal_0: bool = False          # reads universal tag 0
@@ -841,7 +859,9 @@ def first_line(cmd, cwd=None):
 
 
 def setup_go():
-    """Both Go oracles: one program, two modes."""
+    """Both Go oracles: one program, two modes, built by the installed Go.
+    cryptobyte is at the version go.mod pins; encoding/asn1 is that Go's
+    own, not pinned, and its version is recorded."""
     GO_EXE.parent.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, GOFLAGS="-mod=readonly", CGO_ENABLED="0", GOTOOLCHAIN="local")
     try:
@@ -857,7 +877,8 @@ def setup_go():
     return [ProcessOracle("Go cryptobyte", f"golang.org/x/crypto/cryptobyte "
                           f"{mod.group(1) if mod else '?'} ({sums.group(1) if sums else '?'}), "
                           f"built with {go}", [str(GO_EXE), "cryptobyte"]),
-            ProcessOracle("Go encoding/asn1", f"encoding/asn1 of the standard library of {go}",
+            ProcessOracle("Go encoding/asn1", f"encoding/asn1 of the standard library of the "
+                          f"installed {go} (not pinned)",
                           [str(GO_EXE), "asn1"])]
 
 
@@ -910,11 +931,10 @@ ORACLE_RULES = {
     "rust-asn1": Rules(max_tag=2 ** 32 - 1, max_length=2 ** 32 - 1,
                        checked_forms=frozenset({1, 2, 5}), universal_0=True, enum_checked=False),
     "OpenSSL": Rules(lenient_tags=True, max_tag=2 ** 31 - 1, ber_lengths=True,
-                     checked_forms=frozenset({1, 2, 5}), universal_0=True, ber_boolean=True,
-                     enum_checked=False),
+                     checked_forms=frozenset({1, 2, 5, 10}), universal_0=True, ber_boolean=True),
 }
 
-# The oracle programs check only BOOLEAN, INTEGER and NULL contents.
+# The Go and Rust oracle programs check no ENUMERATED contents.
 ENUM_NOT_CHECKED = "the oracle program checks no ENUMERATED contents, so it reads an ENUMERATED "
 
 # What each oracle does on each rule where it parts from DER.
@@ -953,23 +973,25 @@ PARTS = {
         WHY_ENUM_PAD: ENUM_NOT_CHECKED + "with a redundant leading octet",
     },
     "OpenSSL": {
-        WHY_HIGH_LOW: "ASN1_get_object reads a tag number below 31 in the high form (BER)",
-        WHY_TAG_80: "ASN1_get_object reads a first subsequent tag octet 0x80 (BER)",
+        WHY_HIGH_LOW: "ASN1_get_object reads a tag number below 31 in the high form, which BER "
+                      "forbids as well (8.1.2.2)",
+        WHY_TAG_80: "ASN1_get_object reads a first subsequent tag octet 0x80, which BER forbids "
+                    "as well (8.1.2.4.2 c)",
         WHY_TAG_LIMIT: "ASN1_get_object refuses a tag number above 2^31 - 1",
         WHY_INDEFINITE: "ASN1_get_object reads the indefinite length of a constructed element "
                         "(BER), to end-of-contents octets 00 00",
-        WHY_LEN_FF: "asn1_get_length reads the initial length octet 0xFF, skipping leading "
-                    "zero octets (BER)",
+        WHY_LEN_FF: "asn1_get_length reads the initial length octet 0xFF, which BER forbids as "
+                    "well (8.1.3.5 c), skipping leading zero octets",
         WHY_LEN_ZERO: "asn1_get_length reads a long-form length with leading zero octets (BER)",
         WHY_LEN_SHORT: "asn1_get_length reads the long form for a length below 128 (BER)",
         WHY_UNIVERSAL_0: "ASN1_get_object reads universal tag 0 where no end-of-contents octets "
                          "are due",
         WHY_CONS_PRIM: "ASN1_get_object reads universal 8, 11, 16, 17 or 29 in the primitive form",
-        WHY_PRIM_CONS: "ASN1_get_object reads a universal type other than BOOLEAN, INTEGER and "
-                       "NULL in the constructed form (BER, 8.23.6)",
+        WHY_PRIM_CONS: "ASN1_get_object reads a universal type other than BOOLEAN, INTEGER, "
+                       "ENUMERATED and NULL in the constructed form, which BER allows only for "
+                       "the string types and the types encoded as strings (8.6, 8.7, 8.23, and "
+                       "ObjectDescriptor, UTCTime and GeneralizedTime, 8.25)",
         WHY_BOOL_VALUE: "d2i_ASN1_TYPE reads any single contents octet as a BOOLEAN (BER, 8.2.2)",
-        WHY_ENUM_EMPTY: ENUM_NOT_CHECKED + "with no contents octets",
-        WHY_ENUM_PAD: ENUM_NOT_CHECKED + "with a redundant leading octet",
     },
 }
 
@@ -1049,7 +1071,9 @@ def length_sets():
     identifiers of an OCTET STRING and a SEQUENCE, with several runs of
     subsequent octets: all zero, ending in 01, starting with 01, all
     ones, and one octet short. Contents follow when the length is at
-    most 300; else three octets."""
+    most 300; else three octets. Then lengths of 5 to 126 octets that a
+    reader would fit to the contents after them if it skipped leading
+    zero octets or kept the length modulo 2^32 or 2^64."""
     for b in range(0x80, 0x100):
         k = b & 0x7f
         if k == 0:
@@ -1068,12 +1092,27 @@ def length_sets():
                 yield ("initial length octets", "decode", (ident + bytes([b]) + run + body,))
                 yield ("initial length octets", "decode",
                        (ident + bytes([b]) + run + body + b"\x01",))
+    # Long-form lengths of 5 to 126 octets that a wrong reader would take
+    # for a length the contents fit: 128 and 256 with leading zero octets,
+    # and 2^(8(k - 1)) + 128, which is 128 modulo 2^32 from 5 octets on
+    # and modulo 2^64 from 9 on. Each is followed by as many contents
+    # octets as the wrong reading gives.
+    label = "lengths of 5 to 126 octets that a wrong reading fits"
+    for k in range(5, 127):
+        for run, fit in ((bytes(k - 1) + b"\x80", 128), (bytes(k - 2) + b"\x01\x00", 256),
+                         (b"\x01" + bytes(k - 2) + b"\x80", 128)):
+            for ident in (b"\x04", b"\x30"):
+                e = ident + bytes([0x80 | k]) + run + (b"\x05\x00" * 128)[:fit]
+                yield (label, "all", (e,))
+                yield (label, "decode", (e + b"\x01",))
 
 
 def size_sets():
     """Contents of 0 to 100,000 octets, at the lengths where the length
     octets change: whole, with an octet after, cut short, with the
-    length one more and one less, not in the fewest octets, and inside a
+    length one more and one less, not in the fewest octets (in the long
+    form below 128, and with leading zero octets: in one subsequent
+    length octet more than it needs, and in 5, 9 and 126), and inside a
     SEQUENCE."""
     rng = random.Random(3)
     label = "lengths 0 to 100,000"
@@ -1087,8 +1126,9 @@ def size_sets():
             yield (label + ", length one less", "decode", (b"\x04" + length_octets(n - 1) + c,))
         yield (label + ", length one more", "decode", (b"\x04" + length_octets(n + 1) + c,))
         minimal = n.to_bytes(max(1, (n.bit_length() + 7) // 8), "big")
-        yield (label + ", not in the fewest octets", "all",
-               (b"\x04" + bytes([0x81 + len(minimal), 0]) + minimal + c,))
+        for total in sorted({len(minimal) + 1, 5, 9, 126}):
+            yield (label + ", not in the fewest octets", "all",
+                   (b"\x04" + bytes([0x80 + total]) + bytes(total - len(minimal)) + minimal + c,))
         if n < 128:
             yield (label + ", not in the fewest octets", "all", (b"\x04\x81" + bytes([n]) + c,))
         yield (label, "encode", (("p", 0, 4, c),))
@@ -1187,8 +1227,13 @@ def chain_octets(depth, leaf, ident, longer_at=None):
 
 
 def deep_sets():
-    """Chains 10,000 and 100,000 deep."""
+    """Chains 1,000, 10,000 and 100,000 deep."""
     mixed = ((0, 16), (2, 0), (0, 17), (1, 31), (3, 1000), (0, 8))
+    # Only chains 1,000 deep are asked `valid`: its time grows about with
+    # the cube of the depth.
+    label = "nested 1,000 deep"
+    yield (label, "valid", (chain(1000, ("p", 2, 3, b"\x01"), mixed),))
+    yield (label, "valid", (chain(1000, ("p", 0, 1, b"\x01"), ((0, 16),)),))
     for d in (10_000, 100_000):
         label = f"nested {d:,} deep"
         null = chain(d, ("p", 0, 5, b""), ((0, 16),))
@@ -1335,9 +1380,13 @@ def encode_with(tree, target, defect, rng):
             elif defect == "length one less":
                 length = length_octets(n - 1)
             elif defect == "length not in the fewest octets":
+                # The long form below 128, or leading zero octets: half
+                # the time one, else from one up to as many as keep the
+                # length within 126 octets.
                 minimal = n.to_bytes(max(1, (n.bit_length() + 7) // 8), "big")
+                pad = rng.choice((1, rng.randint(1, 126 - len(minimal))))
                 length = (bytes([0x81, n]) if n < 128 and rng.random() < 0.5
-                          else bytes([0x81 + len(minimal), 0]) + minimal)
+                          else bytes([0x80 + pad + len(minimal)]) + bytes(pad) + minimal)
             elif defect == "indefinite length":
                 length, tail = b"\x80", b"\x00\x00"
             elif defect == "high form for a tag below 31":
@@ -1385,12 +1434,17 @@ def spoil(tree, rng):
     elif kind == 2:
         new = ("p", 0, rng.choice(sorted(CONSTRUCTED_UNIVERSAL)), random_contents(rng))
     elif kind == 3:
-        new = ("c", 0, rng.choice(PRIMITIVE_UNIVERSAL), target[3] if target[0] == "c" else [])
+        # Not a reserved number, which this slice reads in either form.
+        new = ("c", 0, rng.choice([n for n in PRIMITIVE_UNIVERSAL if not reserved_universal(n)]),
+               target[3] if target[0] == "c" else [])
     else:
         new = ("p", 0) + rng.choice(((1, b""), (1, b"\x01"), (1, b"\x00\x00"), (2, b""),
                                      (2, b"\x00\x05"), (2, b"\xff\x80"), (10, b""),
                                      (10, b"\x00\x00"), (10, b"\xff\xff"), (5, b"\x00")))
-    return replace(tree, target, new)
+    bad = replace(tree, target, new)
+    if valid(bad):
+        raise AssertionError(f"a spoiled tree the slice accepts: {show(bad)}")
+    return bad
 
 
 def random_octets(rng):
@@ -1794,12 +1848,21 @@ def main():
             by_op[o][op] = by_op[o].get(op, 0) + 1
             theirs_by_model, parted = None, set()
             if op in ("decode", "all"):
+                # The model, with the rules the oracle reads by, must give
+                # its answer, whether or not it agrees with the tool.
                 theirs_by_model, _, parted = model(op, a, ORACLE_RULES[o])
                 by_rules[o][0] += 1
-                by_rules[o][1] += theirs_by_model == theirs
+                if theirs_by_model == theirs:
+                    by_rules[o][1] += 1
+                else:
+                    failures.append((f"{o}, as the model reads with its rules: "
+                                     f"{short(request(op, a))}", short(theirs_by_model, 160),
+                                     short(theirs, 160)))
             if theirs == got:
                 agree[o] += 1
                 continue
+            if theirs_by_model is not None and theirs_by_model != theirs:
+                continue  # already a failure
             reason = difference_reason(o, op, theirs, theirs_by_model, parted)
             if reason is None:
                 failures.append((f"{o}: {short(request(op, a))}", short(got, 160),
@@ -1860,12 +1923,13 @@ def main():
         + ". Each flagged one it accepts is an element this slice accepts, with what is wrong "
         "in something it does not check: a negative INTEGER where a positive one belongs, a BIT "
         "STRING where an INTEGER belongs, or a SEQUENCE given the reserved universal tag 15",
-        f"- Requests nested 10,000 and 100,000 deep, each sent to a `der serve` of its own: "
-        f"{len(deep)}, answered within {DEEP_BUDGET} seconds: {deep_in_time}",
+        f"- Requests nested 1,000 (`valid`), 10,000 and 100,000 deep, each sent to a `der serve` "
+        f"of its own: {len(deep)}, answered within {DEEP_BUDGET} seconds: {deep_in_time}",
         "- Agreement with each oracle over the requests it answers: "
         + ", ".join(f"{o} {agree[o]} of {asked[o]}" for o in names),
         "- Elements each oracle reads (`decode` and `all`) whose answer the model gives with the "
-        "rules that oracle reads by, whether or not it agrees with the tool: "
+        "rules that oracle reads by, whether or not it agrees with the tool (any other is a "
+        "failure): "
         + ", ".join(f"{o} {by_rules[o][1]} of {by_rules[o][0]}" for o in names),
         "- Requests each oracle answers, by operation: "
         + "; ".join(f"{o}: " + ", ".join(f"{op} {n}" for op, n in sorted(by_op[o].items()))

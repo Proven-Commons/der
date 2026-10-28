@@ -2,7 +2,9 @@
 //
 //	der-oracle cryptobyte   golang.org/x/crypto/cryptobyte, at the version
 //	                        go.mod pins (go.sum holds its hash)
-//	der-oracle asn1         the standard library's encoding/asn1
+//	der-oracle asn1         the standard library's encoding/asn1, of the
+//	                        installed Go (not pinned; the test record
+//	                        gives its version)
 //
 // Each line of standard input is one request in the form `der serve`
 // reads (octets in lower-case hex, `-` for none; integers in decimal),

@@ -1,8 +1,8 @@
 /*
   The OpenSSL oracle for tests/run_tests.py: the BER reader of libcrypto
-  (ASN1_get_object, d2i_ASN1_TYPE, d2i_ASN1_INTEGER, d2i_ASN1_NULL),
-  driven line by line. It is built against the system library, whose
-  version tests/run_tests.py checks.
+  (ASN1_get_object, d2i_ASN1_TYPE, d2i_ASN1_INTEGER, d2i_ASN1_ENUMERATED,
+  d2i_ASN1_NULL), driven line by line. It is built against the system
+  library, whose version tests/run_tests.py checks.
 
   Each line of standard input is one request in the form `der serve`
   reads (octets in lower-case hex, `-` for none; integers in decimal),
@@ -20,15 +20,19 @@
 
   ASN1_get_object reads the identifier and length octets of each element,
   given the octets left in the input or in the element around it. It
-  reads BER: the indefinite length for a constructed element, lengths not
-  in the fewest octets, and tag numbers below 31 in the high form. A
+  reads what BER allows and DER does not: the indefinite length for a
+  constructed element, and lengths not in the fewest octets. Beyond BER,
+  it also reads encodings that BER forbids as well: tag numbers below 31
+  in the high form (X.690 8.1.2.2), a first subsequent tag octet 0x80
+  (8.1.2.4.2 c), and the initial length octet 0xFF (8.1.3.5 c). A
   constructed element's contents are read the same way, element by
   element: to the end of its length, or, for the indefinite length, to
-  the end-of-contents octets 00 00 (X.690 8.1.5), which are not part of
-  the tree. An element of the universal class with number 1, 2 or 5 must
-  also be read by d2i_ASN1_TYPE as a BOOLEAN, by d2i_ASN1_INTEGER, or by
-  d2i_ASN1_NULL, given the same octets. The walk keeps its own stack, so
-  deep nesting does not use the machine stack.
+  the end-of-contents octets 00 00 (8.1.5), which are not part of the
+  tree. An element of the universal class with number 1, 2, 5 or 10 must
+  also be read by d2i_ASN1_TYPE as a BOOLEAN, by d2i_ASN1_INTEGER, by
+  d2i_ASN1_NULL, or by d2i_ASN1_ENUMERATED, given the same octets. The
+  walk keeps its own stack, so deep nesting does not use the machine
+  stack.
 
   readint frames the contents octets as an INTEGER element (the length
   octets are written here), reads it with d2i_ASN1_INTEGER and prints it
@@ -107,8 +111,8 @@ static unsigned char *field(const char *f, long *len) {
   return out;
 }
 
-/* Whether the universal BOOLEAN, INTEGER or NULL at p, with max octets
-   available, is one the library reads. */
+/* Whether the universal BOOLEAN, INTEGER, NULL or ENUMERATED at p, with
+   max octets available, is one the library reads. */
 static int typed_ok(int tag, const unsigned char *p, long max) {
   const unsigned char *q = p;
   int ok = 0;
@@ -124,6 +128,10 @@ static int typed_ok(int tag, const unsigned char *p, long max) {
     ASN1_NULL *z = d2i_ASN1_NULL(NULL, &q, max);
     ok = z != NULL;
     ASN1_NULL_free(z);
+  } else if (tag == V_ASN1_ENUMERATED) {
+    ASN1_ENUMERATED *e = d2i_ASN1_ENUMERATED(NULL, &q, max);
+    ok = e != NULL;
+    ASN1_ENUMERATED_free(e);
   } else {
     ok = 1;
   }

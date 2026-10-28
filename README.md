@@ -13,7 +13,7 @@ Machine-checked proofs show:
 
 - **The reader accepts exactly the encodings of the elements this slice accepts.** It accepts an input exactly when the input starts with the encoding X.690 gives an element this slice accepts, and then gives back the element and the octets after it. So it never reads past the end of its input, and every element it gives lies inside its parent's contents. That is exactly DER for the identifier, length and structure of every element and for the contents of BOOLEAN, INTEGER, ENUMERATED and NULL. For the contents of other types it accepts more than DER does.
 - **One encoding per element, one element per input.** Each element has one encoding the reader accepts, and an input starts with the encoding of at most one element. Writing back what the reader read gives the same octets. For the four checked types this is one encoding per value; for the others, two contents octet strings for the same value are two elements.
-- **The writer writes the encoding.** It writes, for every element, the encoding X.690 gives it, and `Der.valid` says whether this slice accepts the element.
+- **The writer writes the encoding.** It writes `Spec.der` for every tree, and `Der.valid` says whether this slice accepts the tree. For a tree this slice accepts, `Spec.der` is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved".
 - **Integers have one encoding.** `readInt` accepts exactly the contents octets X.690 allows for an INTEGER and gives their value. `writeInt` writes them, and each integer has exactly one.
 
 It is tested against a model of X.690 and other implementations; `tests/TEST-RESULTS.md` holds the record. It is a project of [Proven Commons](https://github.com/Proven-Commons/mission), built to the verified bar published there.
@@ -30,7 +30,7 @@ From Lean, on `List UInt8`, with the tree `Der.Element` of `Spec/Element.lean`:
 - `Der.valid : Element → Bool`: whether this slice accepts an element.
 - `Der.readInt : List UInt8 → Option Int` and `Der.writeInt : Int → List UInt8`: the contents octets of an INTEGER.
 
-An element is `.prim cls tag contents` or `.cons cls tag children`, with the class 0 (universal), 1 (application), 2 (context-specific) or 3 (private). `SPEC.md` says what each function does.
+An element is `.prim cls tag contents` or `.cons cls tag children`. The class can be any number in the type; `Der.valid` accepts only 0 (universal), 1 (application), 2 (context-specific) and 3 (private). `SPEC.md` says what each function does.
 
 ## What is proved
 
@@ -38,7 +38,7 @@ The statements are in `Spec.lean`. The definitions they use are in `Spec/Defs.le
 
 | Claim | Theorem |
 |-------|---------|
-| The writer writes the encoding X.690 gives every element. | `Spec.encode_eq` |
+| The writer writes `Spec.der` for every tree. For a tree this slice accepts, that is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved". | `Spec.encode_eq` |
 | `Der.valid` says whether this slice accepts an element. | `Spec.valid_iff` |
 | The reader accepts exactly a DER encoding of such an element, followed by anything, and gives back the element and what follows. | `Spec.decode_iff` |
 | An input starts with the encoding of at most one element this slice accepts: two whose encodings start the same input are the same, and so is what follows. | `Spec.encoding_unique` |
@@ -68,7 +68,7 @@ The elements this slice accepts, `Spec.Valid`, are those whose class is one of t
 
   ECDSA-Sig-Value is the second slice.
 - **Rules that depend on the ASN.1 type.** DER orders the components of a SET by tag (10.3) and of a SET OF by encoding (11.6), leaves out components equal to their default (11.5), and drops trailing zero bits from a named bit list (11.2.2). Without a schema, only a weak condition on a SET can be checked: its components are either in tag order or in encoding order. This slice does not check even that.
-- **Time and memory.** No proof bounds them. The reader is written to take time linear in its input: it never measures more of the input than an element's length, and it adds up long tag numbers and lengths by halves. Its recursion depth is the nesting depth. The tests time deep and long inputs. The writer and `Der.valid` are not linear: each level of nesting copies and measures the encoding of what it holds, so their time grows with the square of the nesting depth. Writing a tree 10,000 levels deep takes about 1.6 s, and 100,000 levels about 190 s.
+- **Time and memory.** No proof bounds them. The reader is written to take time linear in its input: it never measures more of the input than an element's length, and it adds up long tag numbers and lengths by halves. Its recursion depth is the nesting depth. The writer is not linear: each level of nesting copies the encoding of what it holds, so its time grows with the square of the nesting depth. Writing a tree 10,000 levels deep takes about 1.6 s, and 100,000 levels about 190 s. `Der.valid` is slower: at each level it writes and measures the encoding of what that level holds, so its time grows about with the cube of the nesting depth. It takes about 3.4 s for a tree 1,000 levels deep, and 38 s for 2,000. The tests time only nested requests: each one goes to a process of its own, which must answer within 60 seconds. They read trees 10,000 and 100,000 levels deep, write ones 10,000 deep, and ask `Der.valid` of ones 1,000 deep.
 - **Reading requests and printing answers in `Main.lean`.** The differential tests cover them.
 
 ## What you must trust

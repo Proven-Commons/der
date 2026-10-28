@@ -69,8 +69,10 @@ def lengthOctets (n : Nat) : List UInt8 :=
 /-! ## Encodings (8.1.1) -/
 
 mutual
-/-- The DER encoding of an element: identifier octets, length octets and
-    contents octets (8.1.1.1). With the definite form there are no
+/-- The encoding of an element: identifier octets, length octets and
+    contents octets (8.1.1.1). For an element this slice accepts, it is
+    the DER encoding, apart from the contents of the types this slice
+    does not check. With the definite form there are no
     end-of-contents octets (8.1.5). The contents octets of a constructed
     element are the encodings of its elements, one after another
     (8.1.1.1 c, 3.2, 8.9.2, 8.10.2). -/
