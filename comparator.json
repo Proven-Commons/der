@@ -1,0 +1,10 @@
+{
+  "challenge_module": "Spec",
+  "solution_module": "Proofs",
+  "theorem_names": [
+    "Spec.encode_eq", "Spec.valid_iff", "Spec.decode_iff", "Spec.encoding_unique", "Spec.decode_encode",
+    "Spec.decodeAll_iff", "Spec.readInt_iff", "Spec.writeInt_spec", "Spec.writeInt_unique",
+    "Spec.x690_examples", "Spec.x690_rejects"
+  ],
+  "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"]
+}
