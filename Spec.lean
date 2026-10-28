@@ -34,11 +34,13 @@ theorem decode_iff (b : List UInt8) (v : Element) (rest : List UInt8) :
     Der.decode b = some (v, rest) ↔ Valid v ∧ b = der v ++ rest := sorry
 
 /-- An input starts with the encoding of at most one element: two
-    accepted elements whose encodings start the same input are the same,
-    and so is what follows them. With `decode_iff`, the reader gives one
-    element for each input, and accepts one encoding of each element. -/
+    accepted elements whose encodings, as the writer writes them, start
+    the same input are the same, and so is what follows them. The
+    writer's encoding is `der` (`encode_eq`). With `decode_iff`, the
+    reader gives one element for each input, and accepts one encoding of
+    each element. -/
 theorem encoding_unique (v w : Element) (r s : List UInt8) (hv : Valid v) (hw : Valid w)
-    (h : der v ++ r = der w ++ s) : v = w ∧ r = s := sorry
+    (h : Der.encode v ++ r = Der.encode w ++ s) : v = w ∧ r = s := sorry
 
 /-- Reading what the writer wrote gives back the element and what
     follows. -/

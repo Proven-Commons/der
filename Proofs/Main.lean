@@ -22,8 +22,9 @@ theorem decode_iff (b : List UInt8) (v : Element) (rest : List UInt8) :
   DerProofs.decode_iff' b v rest
 
 theorem encoding_unique (v w : Element) (r s : List UInt8) (hv : Valid v) (hw : Valid w)
-    (h : der v ++ r = der w ++ s) : v = w ∧ r = s :=
-  DerProofs.encoding_unique' v w r s hv hw h
+    (h : Der.encode v ++ r = Der.encode w ++ s) : v = w ∧ r = s := by
+  rw [DerProofs.encode_eq' v, DerProofs.encode_eq' w] at h
+  exact DerProofs.encoding_unique' v w r s hv hw h
 
 theorem decode_encode (v : Element) (rest : List UInt8) (h : Valid v) :
     Der.decode (Der.encode v ++ rest) = some (v, rest) :=
