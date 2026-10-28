@@ -29,4 +29,8 @@ code = ["Der.encode", "Der.decode", "Der.decodeAll", "Der.valid", "Der.readInt",
 [tests]
 results = "tests/TEST-RESULTS.md"
 command = "python3 tests/run_tests.py"
-files = ["tests/run_tests.py", "tests/plant_bugs.py"]
+files = ["tests/run_tests.py", "tests/plant_bugs.py",
+         "tests/wycheproof/ecdsa_secp256r1_sha256_test.json",
+         "tests/oracles/go/main.go", "tests/oracles/go/go.mod", "tests/oracles/go/go.sum",
+         "tests/oracles/rust/Cargo.toml", "tests/oracles/rust/Cargo.lock",
+         "tests/oracles/rust/src/main.rs", "tests/oracles/openssl/wrapper.c"]

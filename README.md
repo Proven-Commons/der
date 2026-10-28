@@ -27,6 +27,7 @@ From Lean, on `List UInt8`, with the tree `Der.Element` of `Spec/Element.lean`:
 - `Der.decode : List UInt8 → Option (Element × List UInt8)`: the element at the start of the input, and the octets after it.
 - `Der.decodeAll : List UInt8 → Option Element`: the element that is the whole input.
 - `Der.encode : Element → List UInt8`.
+- `Der.valid : Element → Bool`: whether this slice accepts an element.
 - `Der.readInt : List UInt8 → Option Int` and `Der.writeInt : Int → List UInt8`: the contents octets of an INTEGER.
 
 An element is `.prim cls tag contents` or `.cons cls tag children`, with the class 0 (universal), 1 (application), 2 (context-specific) or 3 (private). `SPEC.md` says what each function does.
@@ -67,7 +68,7 @@ The elements this slice accepts, `Spec.Valid`, are those whose class is one of t
 
   ECDSA-Sig-Value is the second slice.
 - **Rules that depend on the ASN.1 type.** DER orders the components of a SET by tag (10.3) and of a SET OF by encoding (11.6), leaves out components equal to their default (11.5), and drops trailing zero bits from a named bit list (11.2.2). Without a schema, only a weak condition on a SET can be checked: its components are either in tag order or in encoding order. This slice does not check even that.
-- **Time and memory.** No proof bounds them. The reader is written to take time linear in its input: it never measures more of the input than an element's length, and it adds up long tag numbers and lengths by halves. Its recursion depth is the nesting depth. The tests time deep and long inputs.
+- **Time and memory.** No proof bounds them. The reader is written to take time linear in its input: it never measures more of the input than an element's length, and it adds up long tag numbers and lengths by halves. Its recursion depth is the nesting depth. The tests time deep and long inputs. The writer and `Der.valid` are not linear: each level of nesting copies and measures the encoding of what it holds, so their time grows with the square of the nesting depth. Writing a tree 10,000 levels deep takes about 1.6 s, and 100,000 levels about 190 s.
 - **Reading requests and printing answers in `Main.lean`.** The differential tests cover them.
 
 ## What you must trust

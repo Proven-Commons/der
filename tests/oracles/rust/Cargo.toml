@@ -1,0 +1,11 @@
+[package]
+name = "der-oracle"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+asn1 = { version = "=0.24.1", default-features = false, features = ["std"] }
+
+[profile.release]
+debug = false
