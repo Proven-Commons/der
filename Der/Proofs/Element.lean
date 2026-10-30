@@ -1,54 +1,54 @@
 /-
-  Elements: the writer writes `Spec.der`, and the reader accepts exactly
+  Elements: the writer writes `Der.Spec.der`, and the reader accepts exactly
   an encoding of an element this slice accepts, followed by anything.
 -/
 
-import Proofs.Header
+import Der.Proofs.Header
 
 namespace DerProofs
 
 open Der
 
 theorem identifier_ne_nil (cls : Nat) (c : Bool) (tag : Nat) :
-    1 ≤ (Spec.identifier cls c tag).length := by
+    1 ≤ (Der.Spec.identifier cls c tag).length := by
   by_cases h : tag ≤ 30
   · rw [identifier_low _ _ _ h]; simp
   · rw [identifier_high _ _ _ (by omega)]; simp
 
-theorem lengthOctets_ne_nil (n : Nat) : 1 ≤ (Spec.lengthOctets n).length := by
+theorem lengthOctets_ne_nil (n : Nat) : 1 ≤ (Der.Spec.lengthOctets n).length := by
   by_cases h : n ≤ 127
   · rw [lengthOctets_short _ h]; simp
   · rw [lengthOctets_long _ h]; simp
 
 theorem der_prim (cls tag : Nat) (c : List UInt8) :
-    Spec.der (.prim cls tag c) = Spec.identifier cls false tag ++ Spec.lengthOctets c.length ++ c := by
-  simp [Spec.der]
+    Der.Spec.der (.prim cls tag c) = Der.Spec.identifier cls false tag ++ Der.Spec.lengthOctets c.length ++ c := by
+  simp [Der.Spec.der]
 
 theorem der_cons (cls tag : Nat) (cs : List Element) :
-    Spec.der (.cons cls tag cs) =
-      Spec.identifier cls true tag ++ Spec.lengthOctets (Spec.derList cs).length ++ Spec.derList cs := by
-  simp [Spec.der]
+    Der.Spec.der (.cons cls tag cs) =
+      Der.Spec.identifier cls true tag ++ Der.Spec.lengthOctets (Der.Spec.derList cs).length ++ Der.Spec.derList cs := by
+  simp [Der.Spec.der]
 
-theorem derList_nil : Spec.derList [] = [] := by simp [Spec.derList]
+theorem derList_nil : Der.Spec.derList [] = [] := by simp [Der.Spec.derList]
 
 theorem derList_cons (v : Element) (vs : List Element) :
-    Spec.derList (v :: vs) = Spec.der v ++ Spec.derList vs := by
-  simp [Spec.derList]
+    Der.Spec.derList (v :: vs) = Der.Spec.der v ++ Der.Spec.derList vs := by
+  simp [Der.Spec.derList]
 
 theorem valid_prim (cls tag : Nat) (c : List UInt8) :
-    Spec.Valid (.prim cls tag c) ↔ cls < 4 ∧ Spec.PrimitiveOk cls tag c ∧ c.length < 256 ^ 126 := by
-  simp only [Spec.Valid]
+    Der.Spec.Valid (.prim cls tag c) ↔ cls < 4 ∧ Der.Spec.PrimitiveOk cls tag c ∧ c.length < 256 ^ 126 := by
+  simp only [Der.Spec.Valid]
 
 theorem valid_cons (cls tag : Nat) (cs : List Element) :
-    Spec.Valid (.cons cls tag cs) ↔
-      cls < 4 ∧ Spec.ConstructedOk cls tag ∧ Spec.ValidList cs ∧ (Spec.derList cs).length < 256 ^ 126 := by
-  simp only [Spec.Valid]
+    Der.Spec.Valid (.cons cls tag cs) ↔
+      cls < 4 ∧ Der.Spec.ConstructedOk cls tag ∧ Der.Spec.ValidList cs ∧ (Der.Spec.derList cs).length < 256 ^ 126 := by
+  simp only [Der.Spec.Valid]
 
 theorem validList_cons (v : Element) (vs : List Element) :
-    Spec.ValidList (v :: vs) ↔ Spec.Valid v ∧ Spec.ValidList vs := by
-  simp only [Spec.ValidList]
+    Der.Spec.ValidList (v :: vs) ↔ Der.Spec.Valid v ∧ Der.Spec.ValidList vs := by
+  simp only [Der.Spec.ValidList]
 
-theorem der_length_ge (v : Element) : 2 ≤ (Spec.der v).length := by
+theorem der_length_ge (v : Element) : 2 ≤ (Der.Spec.der v).length := by
   cases v with
   | prim cls tag c =>
     rw [der_prim]
@@ -59,19 +59,19 @@ theorem der_length_ge (v : Element) : 2 ≤ (Spec.der v).length := by
   | cons cls tag cs =>
     rw [der_cons]
     have := identifier_ne_nil cls true tag
-    have := lengthOctets_ne_nil (Spec.derList cs).length
+    have := lengthOctets_ne_nil (Der.Spec.derList cs).length
     simp only [List.length_append]
     omega
 
 mutual
-theorem encode_eq' : ∀ v : Element, encode v = Spec.der v
+theorem encode_eq' : ∀ v : Element, encode v = Der.Spec.der v
   | .prim cls tag c => by
     rw [der_prim]
     simp only [encode, identOctets_eq, lengthOctets_eq]
   | .cons cls tag cs => by
     rw [der_cons]
     simp only [encode, identOctets_eq, lengthOctets_eq, encodeList_eq cs]
-theorem encodeList_eq : ∀ vs : List Element, encodeList vs = Spec.derList vs
+theorem encodeList_eq : ∀ vs : List Element, encodeList vs = Der.Spec.derList vs
   | [] => by simp [encodeList, derList_nil]
   | v :: vs => by
     rw [derList_cons]
@@ -79,7 +79,7 @@ theorem encodeList_eq : ∀ vs : List Element, encodeList vs = Spec.derList vs
 end
 
 mutual
-theorem valid_iff' : ∀ v : Element, valid v = true ↔ Spec.Valid v
+theorem valid_iff' : ∀ v : Element, valid v = true ↔ Der.Spec.Valid v
   | .prim cls tag c => by
     rw [valid_prim]
     simp only [valid, Bool.and_eq_true, decide_eq_true_eq, primOk_iff, and_assoc]
@@ -87,8 +87,8 @@ theorem valid_iff' : ∀ v : Element, valid v = true ↔ Spec.Valid v
     rw [valid_cons]
     simp only [valid, Bool.and_eq_true, decide_eq_true_eq, consOk_iff, validList_iff' cs,
       encodeList_eq cs, and_assoc]
-theorem validList_iff' : ∀ vs : List Element, validList vs = true ↔ Spec.ValidList vs
-  | [] => by simp [validList, Spec.ValidList]
+theorem validList_iff' : ∀ vs : List Element, validList vs = true ↔ Der.Spec.ValidList vs
+  | [] => by simp [validList, Der.Spec.ValidList]
   | v :: vs => by
     rw [validList_cons]
     simp only [validList, Bool.and_eq_true, valid_iff' v, validList_iff' vs]
@@ -98,9 +98,9 @@ theorem readElements_zero (f : Nat) (b : List UInt8) : readElements f 0 b = some
   cases f <;> simp [readElements]
 
 mutual
-theorem readElement_der : ∀ (v : Element) (f lim : Nat) (rest : List UInt8), Spec.Valid v →
-    (Spec.der v).length ≤ f + 1 → (Spec.der v).length ≤ lim →
-    readElement f lim (Spec.der v ++ rest) = some (v, (Spec.der v).length, rest)
+theorem readElement_der : ∀ (v : Element) (f lim : Nat) (rest : List UInt8), Der.Spec.Valid v →
+    (Der.Spec.der v).length ≤ f + 1 → (Der.Spec.der v).length ≤ lim →
+    readElement f lim (Der.Spec.der v ++ rest) = some (v, (Der.Spec.der v).length, rest)
   | .prim cls tag c, f, lim, rest, hv, hf, hl => by
     rw [valid_prim] at hv
     obtain ⟨hcls, hok, hlen⟩ := hv
@@ -123,7 +123,7 @@ theorem readElement_der : ∀ (v : Element) (f lim : Nat) (rest : List UInt8), S
     rw [valid_cons] at hv
     obtain ⟨hcls, hok, hcs, hlen⟩ := hv
     have h1 := identifier_ne_nil cls true tag
-    have h2 := lengthOctets_ne_nil (Spec.derList cs).length
+    have h2 := lengthOctets_ne_nil (Der.Spec.derList cs).length
     rw [der_cons] at hf hl ⊢
     simp only [List.length_append] at hf hl ⊢
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
@@ -136,9 +136,9 @@ theorem readElement_der : ∀ (v : Element) (f lim : Nat) (rest : List UInt8), S
     rw [ite_eq_right (show ¬ lim < _ by omega)]
     rw [readElements_der cs f' rest hcs (by omega)]
     simp only [↓reduceIte, (consOk_iff cls tag).mpr hok]
-theorem readElements_der : ∀ (vs : List Element) (f : Nat) (rest : List UInt8), Spec.ValidList vs →
-    (Spec.derList vs).length ≤ f →
-    readElements f (Spec.derList vs).length (Spec.derList vs ++ rest) = some (vs, rest)
+theorem readElements_der : ∀ (vs : List Element) (f : Nat) (rest : List UInt8), Der.Spec.ValidList vs →
+    (Der.Spec.derList vs).length ≤ f →
+    readElements f (Der.Spec.derList vs).length (Der.Spec.derList vs ++ rest) = some (vs, rest)
   | [], f, rest, _, _ => by
     rw [derList_nil]
     exact readElements_zero f rest
@@ -148,21 +148,21 @@ theorem readElements_der : ∀ (vs : List Element) (f : Nat) (rest : List UInt8)
     rw [derList_cons] at hf ⊢
     simp only [List.length_append] at hf ⊢
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    obtain ⟨L, hL⟩ : ∃ L, (Spec.der v).length + (Spec.derList vs).length = L + 1 :=
-      ⟨(Spec.der v).length + (Spec.derList vs).length - 1, by omega⟩
+    obtain ⟨L, hL⟩ : ∃ L, (Der.Spec.der v).length + (Der.Spec.derList vs).length = L + 1 :=
+      ⟨(Der.Spec.der v).length + (Der.Spec.derList vs).length - 1, by omega⟩
     rw [hL, List.append_assoc]
     unfold readElements
     rw [readElement_der v f' (L + 1) _ hv.1 (by omega) (by omega)]
     dsimp only
-    rw [show L + 1 - (Spec.der v).length = (Spec.derList vs).length by omega,
+    rw [show L + 1 - (Der.Spec.der v).length = (Der.Spec.derList vs).length by omega,
       readElements_der vs f' rest hv.2 (by omega)]
 end
 
 theorem read_sound (f : Nat) :
     (∀ lim b v n rest, readElement f lim b = some (v, n, rest) →
-      Spec.Valid v ∧ b = Spec.der v ++ rest ∧ n = (Spec.der v).length ∧ n ≤ lim) ∧
+      Der.Spec.Valid v ∧ b = Der.Spec.der v ++ rest ∧ n = (Der.Spec.der v).length ∧ n ≤ lim) ∧
     (∀ lim b vs rest, readElements f lim b = some (vs, rest) →
-      Spec.ValidList vs ∧ b = Spec.derList vs ++ rest ∧ (Spec.derList vs).length = lim) := by
+      Der.Spec.ValidList vs ∧ b = Der.Spec.derList vs ++ rest ∧ (Der.Spec.derList vs).length = lim) := by
   induction f with
   | zero =>
     refine ⟨fun lim b v n rest h => by simp [readElement] at h, ?_⟩
@@ -172,7 +172,7 @@ theorem read_sound (f : Nat) :
       rw [readElements_zero] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨by simp [Spec.ValidList], by rw [derList_nil]; rfl, by rw [derList_nil]; rfl⟩
+      exact ⟨by simp [Der.Spec.ValidList], by rw [derList_nil]; rfl, by rw [derList_nil]; rfl⟩
     | succ l => simp [readElements] at h
   | succ f ih =>
     obtain ⟨ih1, ih2⟩ := ih
@@ -240,7 +240,7 @@ theorem read_sound (f : Nat) :
         rw [readElements_zero] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨by simp [Spec.ValidList], by rw [derList_nil]; rfl, by rw [derList_nil]; rfl⟩
+        exact ⟨by simp [Der.Spec.ValidList], by rw [derList_nil]; rfl, by rw [derList_nil]; rfl⟩
       | succ l =>
         unfold readElements at h
         cases he : readElement f (l + 1) b with
@@ -264,7 +264,7 @@ theorem read_sound (f : Nat) :
               omega
 
 theorem decode_iff' (b : List UInt8) (v : Element) (rest : List UInt8) :
-    decode b = some (v, rest) ↔ Spec.Valid v ∧ b = Spec.der v ++ rest := by
+    decode b = some (v, rest) ↔ Der.Spec.Valid v ∧ b = Der.Spec.der v ++ rest := by
   constructor
   · intro h
     unfold decode at h
@@ -281,21 +281,21 @@ theorem decode_iff' (b : List UInt8) (v : Element) (rest : List UInt8) :
     unfold decode
     rw [readElement_der v _ _ rest hv (by simp; omega) (by simp)]
 
-theorem encoding_unique' (v w : Element) (r s : List UInt8) (hv : Spec.Valid v) (hw : Spec.Valid w)
-    (h : Spec.der v ++ r = Spec.der w ++ s) : v = w ∧ r = s := by
-  have h1 := (decode_iff' (Spec.der v ++ r) v r).mpr ⟨hv, rfl⟩
-  have h2 := (decode_iff' (Spec.der v ++ r) w s).mpr ⟨hw, h⟩
+theorem encoding_unique' (v w : Element) (r s : List UInt8) (hv : Der.Spec.Valid v) (hw : Der.Spec.Valid w)
+    (h : Der.Spec.der v ++ r = Der.Spec.der w ++ s) : v = w ∧ r = s := by
+  have h1 := (decode_iff' (Der.Spec.der v ++ r) v r).mpr ⟨hv, rfl⟩
+  have h2 := (decode_iff' (Der.Spec.der v ++ r) w s).mpr ⟨hw, h⟩
   rw [h1] at h2
   simp only [Option.some.injEq, Prod.mk.injEq] at h2
   exact h2
 
-theorem decode_encode' (v : Element) (rest : List UInt8) (h : Spec.Valid v) :
+theorem decode_encode' (v : Element) (rest : List UInt8) (h : Der.Spec.Valid v) :
     decode (encode v ++ rest) = some (v, rest) := by
   rw [encode_eq' v]
   exact (decode_iff' _ _ _).mpr ⟨h, rfl⟩
 
 theorem decodeAll_iff' (b : List UInt8) (v : Element) :
-    decodeAll b = some v ↔ Spec.Valid v ∧ b = Spec.der v := by
+    decodeAll b = some v ↔ Der.Spec.Valid v ∧ b = Der.Spec.der v := by
   unfold decodeAll
   constructor
   · intro h
@@ -307,7 +307,7 @@ theorem decodeAll_iff' (b : List UInt8) (v : Element) :
       simpa using this
     · exact absurd h (Option.some_ne_none _).symm
   · rintro ⟨hv, rfl⟩
-    have := (decode_iff' (Spec.der v ++ []) v []).mpr ⟨hv, rfl⟩
+    have := (decode_iff' (Der.Spec.der v ++ []) v []).mpr ⟨hv, rfl⟩
     rw [List.append_nil] at this
     rw [this]
 

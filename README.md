@@ -13,7 +13,7 @@ Machine-checked proofs show:
 
 - **The reader accepts exactly the encodings of the elements this slice accepts.** It accepts an input exactly when the input starts with the encoding X.690 gives an element this slice accepts, and then gives back the element and the octets after it. So it never reads past the end of its input, and every element it gives lies inside its parent's contents. That is exactly DER for the identifier, length and structure of every element and for the contents of BOOLEAN, INTEGER, ENUMERATED and NULL. For the contents of other types it accepts more than DER does.
 - **One encoding per element, one element per input.** Each element has one encoding the reader accepts, and an input starts with the encoding of at most one element. Writing back what the reader read gives the same octets. For the four checked types this is one encoding per value; for the others, two contents octet strings for the same value are two elements.
-- **The writer writes the encoding.** It writes `Spec.der` for every tree, and `Der.valid` says whether this slice accepts the tree. For a tree this slice accepts, `Spec.der` is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved".
+- **The writer writes the encoding.** It writes `Der.Spec.der` for every tree, and `Der.valid` says whether this slice accepts the tree. For a tree this slice accepts, `Der.Spec.der` is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved".
 - **Integers have one encoding.** `readInt` accepts exactly the contents octets X.690 allows for an INTEGER and gives their value. `writeInt` writes them, and each integer has exactly one.
 
 It is tested against a model of X.690 and other implementations; `tests/TEST-RESULTS.md` holds the record. It is a project of [Proven Commons](https://github.com/Proven-Commons/mission), built to the verified bar published there.
@@ -22,7 +22,7 @@ Status: in progress. The specification has not yet been approved by a reviewer a
 
 ## Use it
 
-From Lean, on `List UInt8`, with the tree `Der.Element` of `Spec/Element.lean`:
+From Lean, on `List UInt8`, with the tree `Der.Element` of `Der/Spec/Element.lean`:
 
 - `Der.decode : List UInt8 → Option (Element × List UInt8)`: the element at the start of the input, and the octets after it.
 - `Der.decodeAll : List UInt8 → Option Element`: the element that is the whole input.
@@ -34,21 +34,21 @@ An element is `.prim cls tag contents` or `.cons cls tag children`. The class ca
 
 ## What is proved
 
-The statements are in `Spec.lean`. The definitions they use are in `Spec/Defs.lean`, written from X.690 (02/2021) and Table 1 of X.680, and the proofs are in `Proofs/`.
+The statements are in `Der/Spec.lean`. The definitions they use are in `Der/Spec/Defs.lean`, written from X.690 (02/2021) and Table 1 of X.680, and the proofs are in `Der/Proofs/`.
 
 | Claim | Theorem |
 |-------|---------|
-| The writer writes `Spec.der` for every tree. For a tree this slice accepts, that is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved". | `Spec.encode_eq` |
-| `Der.valid` says whether this slice accepts an element. | `Spec.valid_iff` |
-| The reader accepts exactly a DER encoding of such an element, followed by anything, and gives back the element and what follows. | `Spec.decode_iff` |
-| An input starts with the encoding of at most one element this slice accepts: two whose encodings start the same input are the same, and so is what follows. | `Spec.encoding_unique` |
-| Reading what the writer wrote gives back the element. | `Spec.decode_encode` |
-| The whole input is one element exactly when it is such an encoding. | `Spec.decodeAll_iff` |
-| `readInt` accepts exactly the contents of an INTEGER that X.690 allows, and gives the integer. | `Spec.readInt_iff` |
-| `writeInt` writes such contents for the integer, and they are the only ones. | `Spec.writeInt_spec`, `Spec.writeInt_unique` |
-| X.690's examples: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5, with a tag number of 201 in the high form worked by hand. Nineteen inputs that each break a rule are refused, among them the two constructed forms of "Jones". | `Spec.x690_examples`, `Spec.x690_rejects` |
+| The writer writes `Der.Spec.der` for every tree. For a tree this slice accepts, that is the encoding X.690 gives it, apart from the contents of the types listed under "What is not proved". | `Der.Spec.encode_eq` |
+| `Der.valid` says whether this slice accepts an element. | `Der.Spec.valid_iff` |
+| The reader accepts exactly a DER encoding of such an element, followed by anything, and gives back the element and what follows. | `Der.Spec.decode_iff` |
+| An input starts with the encoding of at most one element this slice accepts: two whose encodings start the same input are the same, and so is what follows. | `Der.Spec.encoding_unique` |
+| Reading what the writer wrote gives back the element. | `Der.Spec.decode_encode` |
+| The whole input is one element exactly when it is such an encoding. | `Der.Spec.decodeAll_iff` |
+| `readInt` accepts exactly the contents of an INTEGER that X.690 allows, and gives the integer. | `Der.Spec.readInt_iff` |
+| `writeInt` writes such contents for the integer, and they are the only ones. | `Der.Spec.writeInt_spec`, `Der.Spec.writeInt_unique` |
+| X.690's examples: lengths 38 and 201, BOOLEAN TRUE, and the primitive "Jones" of 8.23.5, with a tag number of 201 in the high form worked by hand. Nineteen inputs that each break a rule are refused, among them the two constructed forms of "Jones". | `Der.Spec.x690_examples`, `Der.Spec.x690_rejects` |
 
-The elements this slice accepts, `Spec.Valid`, are those whose class is one of the four, whose length octets have at most 126 octets after the first, and whose universal tags follow the rules of `SPEC.md`:
+The elements this slice accepts, `Der.Spec.Valid`, are those whose class is one of the four, whose length octets have at most 126 octets after the first, and whose universal tags follow the rules of `SPEC.md`:
 
 - tag 0 is not used;
 - 8, 11, 16, 17 and 29 are constructed;
@@ -94,15 +94,15 @@ python3 tests/run_tests.py
 python3 tests/plant_bugs.py
 ```
 
-`lake comparator --paranoid` builds the statements and the proofs in a sandbox. It checks that each theorem in `Proofs/` proves exactly the statement in `Spec.lean`, using only the axioms `propext`, `Classical.choice`, and `Quot.sound`, and replays it through every kernel shipped with Lean.
+`lake comparator --paranoid` builds the statements and the proofs in a sandbox. It checks that each theorem in `Der/Proofs/` proves exactly the statement in `Der/Spec.lean`, using only the axioms `propext`, `Classical.choice`, and `Quot.sound`, and replays it through every kernel shipped with Lean.
 
 ## Layout
 
 - `Der/Basic.lean`: the code under proof.
-- `Spec.lean`: the statements, with `sorry` for proofs. A reviewer approves this file.
-- `Spec/Defs.lean`: the definitions the statements use, written from X.690.
-- `Spec/Element.lean`: the tree an element reads into.
-- `Proofs.lean` and `Proofs/`: the proofs.
+- `Der/Spec.lean`: the statements, with `sorry` for proofs. A reviewer approves this file.
+- `Der/Spec/Defs.lean`: the definitions the statements use, written from X.690.
+- `Der/Spec/Element.lean`: the tree an element reads into.
+- `Der/Proofs.lean` and `Der/Proofs/`: the proofs.
 - `Main.lean`: the command-line tool the tests drive.
 - `lakefile.toml`: the build. It names the package and its version, its libraries and executable, and the default targets, and sets nothing else.
 - `comparator.json`: which theorems `lake comparator` checks, and which axioms it allows.

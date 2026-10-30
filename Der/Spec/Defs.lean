@@ -1,18 +1,18 @@
 /-
-  The definitions the statements in `Spec.lean` use, written from
+  The definitions the statements in `Der/Spec.lean` use, written from
   Rec. ITU-T X.690 (02/2021), the Basic and Distinguished Encoding Rules
   of ASN.1, https://www.itu.int/rec/T-REC-X.690, and from Table 1 of
   Rec. ITU-T X.680 (02/2021), the universal class tag assignments.
   Section numbers below are those of X.690 unless they name X.680.
 
   This file is part of the specification: a reviewer approves it with
-  `Spec.lean` and `Spec/Element.lean`. It shares nothing with the code in
+  `Der/Spec.lean` and `Der/Spec/Element.lean`. It shares nothing with the code in
   `Der/` but the type `Der.Element`.
 -/
 
-import Spec.Element
+import Der.Spec.Element
 
-namespace Spec
+namespace Der.Spec
 
 open Der
 
@@ -177,4 +177,4 @@ def ValidList : List Element → Prop
   | e :: es => Valid e ∧ ValidList es
 end
 
-end Spec
+end Der.Spec

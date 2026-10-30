@@ -1,18 +1,18 @@
 /-
   The statements this library is proved to meet, for a reviewer to
-  approve. Each `sorry` is proved in `Proofs/` under the same name, and
+  approve. Each `sorry` is proved in `Der/Proofs/` under the same name, and
   `lake comparator` checks that each proof proves exactly the statement
   here.
 
-  The definitions they use are in `Spec/Defs.lean`, written from X.690,
-  and the tree type is in `Spec/Element.lean`. The functions they are
+  The definitions they use are in `Der/Spec/Defs.lean`, written from X.690,
+  and the tree type is in `Der/Spec/Element.lean`. The functions they are
   about are in `Der/Basic.lean`.
 -/
 
-import Spec.Defs
+import Der.Spec.Defs
 import Der
 
-namespace Spec
+namespace Der.Spec
 
 open Der
 
@@ -80,8 +80,8 @@ theorem writeInt_unique (c : List UInt8) (h : IntegerContents c) :
     high form (8.1.2.4), worked by hand: the leading octet 0x5F for an
     application class primitive, then 201 = 1 × 128 + 73 as 0x81 0x49. -/
 theorem x690_examples :
-    Spec.lengthOctets 38 = [0x26] ∧ Spec.lengthOctets 201 = [0x81, 0xC9] ∧
-    Spec.identifier 1 false 201 = [0x5F, 0x81, 0x49] ∧
+    Der.Spec.lengthOctets 38 = [0x26] ∧ Der.Spec.lengthOctets 201 = [0x81, 0xC9] ∧
+    Der.Spec.identifier 1 false 201 = [0x5F, 0x81, 0x49] ∧
     Der.decode [0x5F, 0x81, 0x49, 0x00] = some (.prim 1 201 [], []) ∧
     Der.decode [0x01, 0x01, 0xFF] = some (.prim 0 1 [0xFF], []) ∧
     Der.decode [0x1A, 0x05, 0x4A, 0x6F, 0x6E, 0x65, 0x73] =
@@ -125,4 +125,4 @@ theorem x690_rejects :
     Der.decode [0x00, 0x00] = none ∧
     Der.decode [0x04, 0x05, 0x00] = none := sorry
 
-end Spec
+end Der.Spec

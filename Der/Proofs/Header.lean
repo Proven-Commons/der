@@ -4,7 +4,7 @@
   code's checks against the specification's.
 -/
 
-import Proofs.Digits
+import Der.Proofs.Digits
 
 namespace DerProofs
 
@@ -70,19 +70,19 @@ theorem mapIdx_eq_sub (ds : List Nat) (h : ds ≠ []) :
   simp only [this, ↓reduceIte]
 
 theorem identifier_high (cls : Nat) (c : Bool) (tag : Nat) (h : 31 ≤ tag) :
-    Spec.identifier cls c tag =
-      (Spec.classAndForm cls c + 31).toUInt8 :: sub (Spec.digits 128 tag) := by
-  unfold Spec.identifier
+    Der.Spec.identifier cls c tag =
+      (Der.Spec.classAndForm cls c + 31).toUInt8 :: sub (Der.Spec.digits 128 tag) := by
+  unfold Der.Spec.identifier
   simp only [show ¬ tag ≤ 30 by omega, ↓reduceIte]
   rw [mapIdx_eq_sub _ (digits_ne_nil _ _)]
 
 theorem identifier_low (cls : Nat) (c : Bool) (tag : Nat) (h : tag ≤ 30) :
-    Spec.identifier cls c tag = [(Spec.classAndForm cls c + tag).toUInt8] := by
-  unfold Spec.identifier
+    Der.Spec.identifier cls c tag = [(Der.Spec.classAndForm cls c + tag).toUInt8] := by
+  unfold Der.Spec.identifier
   simp only [h, ↓reduceIte]
 
 theorem classAndForm_eq (cls : Nat) (c : Bool) :
-    Spec.classAndForm cls c = cls * 64 + if c then 32 else 0 := rfl
+    Der.Spec.classAndForm cls c = cls * 64 + if c then 32 else 0 := rfl
 
 theorem readIdentifier_cons (b : UInt8) (bs : List UInt8) :
     readIdentifier (b :: bs) =
@@ -97,15 +97,15 @@ theorem readIdentifier_cons (b : UInt8) (bs : List UInt8) :
         | _ => none := rfl
 
 theorem lead_parts (cls : Nat) (c : Bool) (t : Nat) (hcls : cls < 4) (ht : t ≤ 31) :
-    (Spec.classAndForm cls c + t) % 32 = t ∧ (Spec.classAndForm cls c + t) / 64 = cls ∧
-    ((Spec.classAndForm cls c + t) / 32 % 2 == 1) = c ∧ Spec.classAndForm cls c + t < 256 := by
+    (Der.Spec.classAndForm cls c + t) % 32 = t ∧ (Der.Spec.classAndForm cls c + t) / 64 = cls ∧
+    ((Der.Spec.classAndForm cls c + t) / 32 % 2 == 1) = c ∧ Der.Spec.classAndForm cls c + t < 256 := by
   rw [classAndForm_eq]
   cases c <;> simp <;> omega
 
 theorem readIdentifier_identifier (cls : Nat) (c : Bool) (tag : Nat) (rest : List UInt8)
     (hcls : cls < 4) :
-    readIdentifier (Spec.identifier cls c tag ++ rest) =
-      some (cls, c, tag, (Spec.identifier cls c tag).length, rest) := by
+    readIdentifier (Der.Spec.identifier cls c tag ++ rest) =
+      some (cls, c, tag, (Der.Spec.identifier cls c tag).length, rest) := by
   by_cases ht : tag ≤ 30
   · obtain ⟨h1, h2, h3, h4⟩ := lead_parts cls c tag hcls (by omega)
     rw [identifier_low cls c tag ht, List.singleton_append, readIdentifier_cons,
@@ -154,7 +154,7 @@ theorem splitTag_sound (bs : List UInt8) (acc out : List Nat) (rest : List UInt8
         rw [sub_cons _ _ hne, List.cons_append, e]
 
 theorem first_octet (b : UInt8) (t : Nat) (ht : t = b.toNat % 32) :
-    (Spec.classAndForm (b.toNat / 64) (b.toNat / 32 % 2 == 1) + t).toUInt8 = b := by
+    (Der.Spec.classAndForm (b.toNat / 64) (b.toNat / 32 % 2 == 1) + t).toUInt8 = b := by
   subst ht
   apply UInt8.toNat_inj.mp
   have hb := UInt8.toNat_lt b
@@ -164,7 +164,7 @@ theorem first_octet (b : UInt8) (t : Nat) (ht : t = b.toNat % 32) :
 
 theorem readIdentifier_sound {b : List UInt8} {cls : Nat} {c : Bool} {tag n : Nat}
     {rest : List UInt8} (h : readIdentifier b = some (cls, c, tag, n, rest)) :
-    cls < 4 ∧ b = Spec.identifier cls c tag ++ rest ∧ n = (Spec.identifier cls c tag).length := by
+    cls < 4 ∧ b = Der.Spec.identifier cls c tag ++ rest ∧ n = (Der.Spec.identifier cls c tag).length := by
   cases b with
   | nil => simp [readIdentifier] at h
   | cons x bs =>
@@ -187,7 +187,7 @@ theorem readIdentifier_sound {b : List UInt8} {cls : Nat} {c : Bool} {tag n : Na
             obtain ⟨ds0, hne, hlt, hbs, hout⟩ := splitTag_sound bs [] _ _ hs
             simp only [List.reverse_nil, List.nil_append] at hout
             subst hout
-            have hdig : Spec.digits 128 (ofDigits 7 (d :: ds)) = d :: ds := by
+            have hdig : Der.Spec.digits 128 (ofDigits 7 (d :: ds)) = d :: ds := by
               rw [ofDigits_eq, ← two_pow_seven]
               exact digits_digitsVal 7 (by omega) _ (by simp) (by rwa [two_pow_seven])
                 (Or.inl (by simpa using hd))
@@ -205,28 +205,28 @@ set_option exponentiation.threshold 1024 in
 theorem bound_eq : (2 : Nat) ^ (8 * 126) = 256 ^ 126 := by
   rw [Nat.pow_mul]
 
-theorem digits256_length_le (n : Nat) : (Spec.digits 256 n).length ≤ 126 ↔ n < 256 ^ 126 := by
+theorem digits256_length_le (n : Nat) : (Der.Spec.digits 256 n).length ≤ 126 ↔ n < 256 ^ 126 := by
   rw [← two_pow_eight, digits_length_le 8 (by omega) n 126 (by omega), two_pow_eight, bound_eq]
 
 theorem le_bound : 256 ≤ (256 : Nat) ^ 126 := by
   have := Nat.pow_le_pow_right (show 0 < 256 by omega) (show 1 ≤ 126 by omega)
   rwa [Nat.pow_one] at this
 
-theorem lengthOctets_eq (n : Nat) : lengthOctets n = Spec.lengthOctets n := by
-  unfold lengthOctets Spec.lengthOctets
+theorem lengthOctets_eq (n : Nat) : lengthOctets n = Der.Spec.lengthOctets n := by
+  unfold lengthOctets Der.Spec.lengthOctets
   by_cases h : n < 128
   · simp only [h, ↓reduceIte, show n ≤ 127 by omega]
   · simp only [h, ↓reduceIte, show ¬ n ≤ 127 by omega]
     rw [toDigits_eq 8 (by omega), two_pow_eight]
 
-theorem lengthOctets_short (n : Nat) (h : n ≤ 127) : Spec.lengthOctets n = [n.toUInt8] := by
-  unfold Spec.lengthOctets
+theorem lengthOctets_short (n : Nat) (h : n ≤ 127) : Der.Spec.lengthOctets n = [n.toUInt8] := by
+  unfold Der.Spec.lengthOctets
   simp only [h, ↓reduceIte]
 
 theorem lengthOctets_long (n : Nat) (h : ¬ n ≤ 127) :
-    Spec.lengthOctets n =
-      (128 + (Spec.digits 256 n).length).toUInt8 :: (Spec.digits 256 n).map Nat.toUInt8 := by
-  unfold Spec.lengthOctets
+    Der.Spec.lengthOctets n =
+      (128 + (Der.Spec.digits 256 n).length).toUInt8 :: (Der.Spec.digits 256 n).map Nat.toUInt8 := by
+  unfold Der.Spec.lengthOctets
   simp only [h, ↓reduceIte]
 
 theorem readLength_cons (b : UInt8) (bs : List UInt8) :
@@ -251,7 +251,7 @@ theorem map_toNat_toUInt8 (ds : List Nat) (h : ∀ d ∈ ds, d < 256) :
   exact toNat_toUInt8 (h x hx)
 
 theorem readLength_lengthOctets (n : Nat) (rest : List UInt8) (h : n < 256 ^ 126) :
-    readLength (Spec.lengthOctets n ++ rest) = some (n, (Spec.lengthOctets n).length, rest) := by
+    readLength (Der.Spec.lengthOctets n ++ rest) = some (n, (Der.Spec.lengthOctets n).length, rest) := by
   by_cases hs : n ≤ 127
   · rw [lengthOctets_short n hs, List.singleton_append, readLength_cons,
       toNat_toUInt8 (show n < 256 by omega)]
@@ -262,9 +262,9 @@ theorem readLength_lengthOctets (n : Nat) (rest : List UInt8) (h : n < 256 ^ 126
     have hk0 := List.length_pos_iff.mpr hne
     have hlt := digits_lt (by omega : 2 ≤ 256) n
     obtain ⟨d, ds', he, hd⟩ := digits_head (by omega : 2 ≤ 256) (show n ≠ 0 by omega)
-    have hv : ofDigits 8 (((Spec.digits 256 n).map Nat.toUInt8).map UInt8.toNat) = n := by
+    have hv : ofDigits 8 (((Der.Spec.digits 256 n).map Nat.toUInt8).map UInt8.toNat) = n := by
       rw [map_toNat_toUInt8 _ hlt, ofDigits_eq, ← two_pow_eight, digitsVal_digits 8 (by omega)]
-    generalize hds : Spec.digits 256 n = ds at hk hne hk0 hlt he hv
+    generalize hds : Der.Spec.digits 256 n = ds at hk hne hk0 hlt he hv
     subst he
     rw [toNat_toUInt8 (show 128 + (d :: ds').length < 256 by omega)]
     have htake : ((d :: ds').map Nat.toUInt8 ++ rest).take (d :: ds').length =
@@ -289,7 +289,7 @@ theorem toUInt8_toNat (b : UInt8) : b.toNat.toUInt8 = b := by simp
 
 theorem readLength_sound {b : List UInt8} {n m : Nat} {rest : List UInt8}
     (h : readLength b = some (n, m, rest)) :
-    n < 256 ^ 126 ∧ b = Spec.lengthOctets n ++ rest ∧ m = (Spec.lengthOctets n).length := by
+    n < 256 ^ 126 ∧ b = Der.Spec.lengthOctets n ++ rest ∧ m = (Der.Spec.lengthOctets n).length := by
   cases b with
   | nil => simp [readLength] at h
   | cons x bs =>
@@ -342,11 +342,11 @@ theorem readLength_sound {b : List UInt8} {n m : Nat} {rest : List UInt8}
               rw [hz]
               simp only [List.head?_cons, Option.some.injEq]
               exact UInt8.toNat_inj.mp (by simpa using h0)
-            have hdig : Spec.digits 256 (ofDigits 8 ((bs.take k).map UInt8.toNat)) =
+            have hdig : Der.Spec.digits 256 (ofDigits 8 ((bs.take k).map UInt8.toNat)) =
                 (bs.take k).map UInt8.toNat := by
               rw [ofDigits_eq, ← two_pow_eight]
               exact digits_digitsVal 8 (by omega) _ hne hall (Or.inl hhead)
-            have hlen : (Spec.digits 256 (ofDigits 8 ((bs.take k).map UInt8.toNat))).length ≤ 126 := by
+            have hlen : (Der.Spec.digits 256 (ofDigits 8 ((bs.take k).map UInt8.toNat))).length ≤ 126 := by
               rw [hdig, List.length_map]
               omega
             refine ⟨(digits256_length_le _).mp hlen, ?_, ?_⟩
@@ -368,14 +368,14 @@ theorem readLength_sound {b : List UInt8} {n m : Nat} {rest : List UInt8}
 /-- Only the class modulo 4 reaches the octet, so the code's `cls % 4`
     and the specification's `cls` give the same octet. -/
 theorem lead_octet (cls : Nat) (c : Bool) (k : Nat) :
-    (cls % 4 * 64 + (if c then 32 else 0) + k).toUInt8 = (Spec.classAndForm cls c + k).toUInt8 := by
+    (cls % 4 * 64 + (if c then 32 else 0) + k).toUInt8 = (Der.Spec.classAndForm cls c + k).toUInt8 := by
   apply UInt8.toNat_inj.mp
   rw [classAndForm_eq]
   simp only [Nat.toUInt8]
   cases c <;> simp <;> omega
 
 theorem identOctets_eq (cls : Nat) (c : Bool) (tag : Nat) :
-    identOctets cls c tag = Spec.identifier cls c tag := by
+    identOctets cls c tag = Der.Spec.identifier cls c tag := by
   unfold identOctets
   by_cases ht : tag < 31
   · rw [identifier_low cls c tag (by omega)]
@@ -385,8 +385,8 @@ theorem identOctets_eq (cls : Nat) (c : Bool) (tag : Nat) :
     rw [toDigits_eq 7 (by omega), two_pow_seven]
     rfl
 
-theorem intOk_iff (c : List UInt8) : intOk c = true ↔ Spec.IntegerContents c := by
-  unfold Spec.IntegerContents
+theorem intOk_iff (c : List UInt8) : intOk c = true ↔ Der.Spec.IntegerContents c := by
+  unfold Der.Spec.IntegerContents
   match c with
   | [] => simp [intOk]
   | [a] => simp [intOk]
@@ -410,18 +410,18 @@ theorem intOk_iff (c : List UInt8) : intOk c = true ↔ Spec.IntegerContents c :
       omega
 
 theorem constructedUniversal_iff (tag : Nat) :
-    constructedUniversal tag = true ↔ Spec.ConstructedUniversal tag := by
-  unfold constructedUniversal Spec.ConstructedUniversal
+    constructedUniversal tag = true ↔ Der.Spec.ConstructedUniversal tag := by
+  unfold constructedUniversal Der.Spec.ConstructedUniversal
   simp [Bool.or_eq_true, beq_iff_eq, or_assoc]
 
 theorem reservedUniversal_iff (tag : Nat) :
-    reservedUniversal tag = true ↔ Spec.ReservedUniversal tag := by
-  unfold reservedUniversal Spec.ReservedUniversal
+    reservedUniversal tag = true ↔ Der.Spec.ReservedUniversal tag := by
+  unfold reservedUniversal Der.Spec.ReservedUniversal
   simp
 
 theorem contentsOk_iff (tag : Nat) (c : List UInt8) :
     contentsOk tag c = true ↔
-      (tag = 1 → c = [0] ∨ c = [255]) ∧ (tag = 2 ∨ tag = 10 → Spec.IntegerContents c) ∧
+      (tag = 1 → c = [0] ∨ c = [255]) ∧ (tag = 2 ∨ tag = 10 → Der.Spec.IntegerContents c) ∧
         (tag = 5 → c = []) := by
   unfold contentsOk
   split
@@ -435,8 +435,8 @@ theorem contentsOk_iff (tag : Nat) (c : List UInt8) :
       fun h => absurd h h5⟩
 
 theorem primOk_iff (cls tag : Nat) (c : List UInt8) :
-    primOk cls tag c = true ↔ Spec.PrimitiveOk cls tag c := by
-  unfold primOk Spec.PrimitiveOk
+    primOk cls tag c = true ↔ Der.Spec.PrimitiveOk cls tag c := by
+  unfold primOk Der.Spec.PrimitiveOk
   by_cases hc : cls = 0
   · subst hc
     simp only [bne_self_eq_false, Bool.false_or, Bool.and_eq_true, bne_iff_ne, ne_eq,
@@ -445,8 +445,8 @@ theorem primOk_iff (cls tag : Nat) (c : List UInt8) :
     simp only [and_assoc]
   · simp [hc]
 
-theorem consOk_iff (cls tag : Nat) : consOk cls tag = true ↔ Spec.ConstructedOk cls tag := by
-  unfold consOk Spec.ConstructedOk
+theorem consOk_iff (cls tag : Nat) : consOk cls tag = true ↔ Der.Spec.ConstructedOk cls tag := by
+  unfold consOk Der.Spec.ConstructedOk
   by_cases hc : cls = 0
   · subst hc
     simp [constructedUniversal_iff, reservedUniversal_iff]

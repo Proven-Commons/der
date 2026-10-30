@@ -29,7 +29,7 @@ checked two ways.
    `encode` writes a tree (8.1.2, 8.1.3, 10.1), and `read_int` and
    `write_int` the two's complement integers of 8.3. X.690 has four
    classes; for a class number of 4 or more, `encode` writes it as
-   `Spec.der` does, the class times 64 taken as an octet, so modulo 4.
+   `Der.Spec.der` does, the class times 64 taken as an octet, so modulo 4.
    `valid` says whether the slice accepts a tree: every element of a
    class from 0 to 3, the universal tags and contents as `read` checks
    them, and every length within the long form. The model also checks
@@ -500,7 +500,7 @@ def identifier_octets(cls, constructed, number):
     with bits 5 to 1 all ones, then the number in base 128, most
     significant first, bit 8 one in every octet but the last. X.690
     has four classes; a class number of 4 or more is written as
-    `Spec.der` writes it, the class times 64 taken as an octet, which is
+    `Der.Spec.der` writes it, the class times 64 taken as an octet, which is
     the class modulo 4. No such tree is valid."""
     lead = (cls % 4) << 6 | (0x20 if constructed else 0)
     if number <= 30:
@@ -554,7 +554,7 @@ def encode(tree):
 
 
 def valid(tree):
-    """Whether this slice accepts a tree (`Spec.Valid`): every element
+    """Whether this slice accepts a tree (`Der.Spec.Valid`): every element
     of a class from 0 to 3, its universal tag and contents as `read`
     checks them, and every length within the long form, which `encode`
     checks."""

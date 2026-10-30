@@ -1,13 +1,13 @@
 /-
-  The statements of `Spec.lean`, each proved from the lemmas in the
-  other files of `Proofs/`. `lake comparator` checks that each theorem
-  here is exactly the one in `Spec.lean`.
+  The statements of `Der/Spec.lean`, each proved from the lemmas in the
+  other files of `Der/Proofs/`. `lake comparator` checks that each theorem
+  here is exactly the one in `Der/Spec.lean`.
 -/
 
-import Proofs.Element
-import Proofs.Int
+import Der.Proofs.Element
+import Der.Proofs.Int
 
-namespace Spec
+namespace Der.Spec
 
 open Der
 
@@ -47,8 +47,8 @@ theorem writeInt_unique (c : List UInt8) (h : IntegerContents c) :
   DerProofs.writeInt_unique' c h
 
 theorem x690_examples :
-    Spec.lengthOctets 38 = [0x26] ∧ Spec.lengthOctets 201 = [0x81, 0xC9] ∧
-    Spec.identifier 1 false 201 = [0x5F, 0x81, 0x49] ∧
+    Der.Spec.lengthOctets 38 = [0x26] ∧ Der.Spec.lengthOctets 201 = [0x81, 0xC9] ∧
+    Der.Spec.identifier 1 false 201 = [0x5F, 0x81, 0x49] ∧
     Der.decode [0x5F, 0x81, 0x49, 0x00] = some (.prim 1 201 [], []) ∧
     Der.decode [0x01, 0x01, 0xFF] = some (.prim 0 1 [0xFF], []) ∧
     Der.decode [0x1A, 0x05, 0x4A, 0x6F, 0x6E, 0x65, 0x73] =
@@ -87,4 +87,4 @@ theorem x690_rejects :
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
     rfl⟩
 
-end Spec
+end Der.Spec

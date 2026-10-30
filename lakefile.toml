@@ -1,16 +1,18 @@
 name = "der"
 license = "Apache-2.0"
 version = "0.1.0"
-defaultTargets = ["Der", "Spec", "Proofs", "der"]
+defaultTargets = ["Der", "DerSpec", "DerProofs", "der"]
 
 [[lean_lib]]
 name = "Der"
 
 [[lean_lib]]
-name = "Spec"
+name = "DerSpec"
+roots = ["Der.Spec"]
 
 [[lean_lib]]
-name = "Proofs"
+name = "DerProofs"
+roots = ["Der.Proofs"]
 
 [[lean_exe]]
 name = "der"

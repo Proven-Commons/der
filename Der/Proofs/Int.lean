@@ -3,7 +3,7 @@
   allows, `writeInt` writes them, and each integer has one encoding.
 -/
 
-import Proofs.Header
+import Der.Proofs.Header
 
 namespace DerProofs
 
@@ -17,12 +17,12 @@ theorem uval_eq (c : List UInt8) : uval c = digitsVal 8 (c.map UInt8.toNat) := b
   rw [List.foldl_map]
 
 theorem integerValue_cons (a : UInt8) (t : List UInt8) :
-    Spec.integerValue (a :: t) =
+    Der.Spec.integerValue (a :: t) =
       if 128 ≤ a.toNat then (uval (a :: t) : Int) - 2 ^ (8 * (t.length + 1)) else uval (a :: t) := by
-  simp [Spec.integerValue, uval]
+  simp [Der.Spec.integerValue, uval]
 
 theorem readInt_iff' (c : List UInt8) (z : Int) :
-    readInt c = some z ↔ Spec.IntegerContents c ∧ Spec.integerValue c = z := by
+    readInt c = some z ↔ Der.Spec.IntegerContents c ∧ Der.Spec.integerValue c = z := by
   rw [← intOk_iff]
   unfold readInt
   cases c with
@@ -89,8 +89,8 @@ theorem uval_comp (c : List UInt8) : uval (comp c) + uval c + 1 = 2 ^ (8 * c.len
     omega
 
 theorem integerContents_comp (c : List UInt8) :
-    Spec.IntegerContents (comp c) ↔ Spec.IntegerContents c := by
-  unfold Spec.IntegerContents comp
+    Der.Spec.IntegerContents (comp c) ↔ Der.Spec.IntegerContents c := by
+  unfold Der.Spec.IntegerContents comp
   constructor
   · rintro ⟨hne, h⟩
     refine ⟨fun h0 => hne (by simp [h0]), ?_⟩
@@ -134,14 +134,14 @@ theorem writeInt_neg (z : Int) (h : ¬ 0 ≤ z) : writeInt z = comp (pos (-z - 1
   split <;> simp_all
 
 theorem map_digits_toUInt8 (m : Nat) :
-    ((Spec.digits 256 m).map Nat.toUInt8).map UInt8.toNat = Spec.digits 256 m :=
+    ((Der.Spec.digits 256 m).map Nat.toUInt8).map UInt8.toNat = Der.Spec.digits 256 m :=
   map_toNat_toUInt8 _ (digits_lt (by omega) m)
 
-theorem uval_digits (m : Nat) : uval ((Spec.digits 256 m).map Nat.toUInt8) = m := by
+theorem uval_digits (m : Nat) : uval ((Der.Spec.digits 256 m).map Nat.toUInt8) = m := by
   rw [uval_eq, map_digits_toUInt8, ← two_pow_eight, digitsVal_digits 8 (by omega)]
 
 theorem pos_spec (m : Nat) :
-    ∃ a t, pos m = a :: t ∧ a.toNat < 128 ∧ uval (pos m) = m ∧ Spec.IntegerContents (pos m) := by
+    ∃ a t, pos m = a :: t ∧ a.toNat < 128 ∧ uval (pos m) = m ∧ Der.Spec.IntegerContents (pos m) := by
   unfold pos
   rw [toDigits_eq 8 (by omega), two_pow_eight]
   have hu := uval_digits m
@@ -187,7 +187,7 @@ theorem pos_spec (m : Nat) :
       omega
     omega
 
-theorem pos_unique (c : List UInt8) (h : Spec.IntegerContents c) (a : UInt8) (t : List UInt8)
+theorem pos_unique (c : List UInt8) (h : Der.Spec.IntegerContents c) (a : UInt8) (t : List UInt8)
     (hc : c = a :: t) (ha : a.toNat < 128) : pos (uval c) = c := by
   subst hc
   obtain ⟨-, hic⟩ := h
@@ -226,17 +226,17 @@ theorem pos_unique (c : List UInt8) (h : Spec.IntegerContents c) (a : UInt8) (t 
     simp only [show ¬ 128 ≤ a.toNat by omega, ↓reduceIte]
 
 theorem integerValue_low (a : UInt8) (t : List UInt8) (ha : a.toNat < 128) :
-    Spec.integerValue (a :: t) = uval (a :: t) := by
+    Der.Spec.integerValue (a :: t) = uval (a :: t) := by
   rw [integerValue_cons]
   simp [show ¬ 128 ≤ a.toNat by omega]
 
 theorem integerValue_high (a : UInt8) (t : List UInt8) (ha : 128 ≤ a.toNat) :
-    Spec.integerValue (a :: t) = (uval (a :: t) : Int) - ((2 ^ (8 * (t.length + 1)) : Nat) : Int) := by
+    Der.Spec.integerValue (a :: t) = (uval (a :: t) : Int) - ((2 ^ (8 * (t.length + 1)) : Nat) : Int) := by
   rw [integerValue_cons]
   simp [ha]
 
 theorem writeInt_spec' (z : Int) :
-    Spec.IntegerContents (writeInt z) ∧ Spec.integerValue (writeInt z) = z := by
+    Der.Spec.IntegerContents (writeInt z) ∧ Der.Spec.integerValue (writeInt z) = z := by
   by_cases hz : 0 ≤ z
   · rw [writeInt_nonneg z hz]
     obtain ⟨a, t, he, ha, hu, hic⟩ := pos_spec z.toNat
@@ -255,8 +255,8 @@ theorem writeInt_spec' (z : Int) :
     rw [hlen] at hcomp
     omega
 
-theorem writeInt_unique' (c : List UInt8) (h : Spec.IntegerContents c) :
-    writeInt (Spec.integerValue c) = c := by
+theorem writeInt_unique' (c : List UInt8) (h : Der.Spec.IntegerContents c) :
+    writeInt (Der.Spec.integerValue c) = c := by
   obtain ⟨a, t, rfl⟩ := List.exists_cons_of_ne_nil h.1
   by_cases ha : a.toNat < 128
   · rw [integerValue_low a t ha, writeInt_nonneg _ (by omega)]
@@ -271,7 +271,7 @@ theorem writeInt_unique' (c : List UInt8) (h : Spec.IntegerContents c) :
       simp only [List.length_cons] at hcomp
       omega
     rw [hm]
-    have hic : Spec.IntegerContents (comp (a :: t)) := (integerContents_comp _).mpr h
+    have hic : Der.Spec.IntegerContents (comp (a :: t)) := (integerContents_comp _).mpr h
     rw [pos_unique (comp (a :: t)) hic (255 - a) (comp t) rfl (by rw [toNat_comp]; omega),
       comp_comp_list]
 

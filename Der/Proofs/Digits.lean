@@ -3,7 +3,7 @@
   `toDigits`, and the specification's `digits`.
 -/
 
-import Spec.Defs
+import Der.Spec.Defs
 import Der
 
 namespace DerProofs
@@ -99,20 +99,20 @@ theorem le_digitsVal (w d : Nat) (ds : List Nat) (hd : d ≠ 0) :
 
 /-! ## The specification's digits -/
 
-theorem digits_of_lt {b n : Nat} (h : n < b) : Spec.digits b n = [n] := by
-  rw [Spec.digits]
+theorem digits_of_lt {b n : Nat} (h : n < b) : Der.Spec.digits b n = [n] := by
+  rw [Der.Spec.digits]
   simp [h]
 
 theorem digits_of_ge {b n : Nat} (hb : 2 ≤ b) (h : b ≤ n) :
-    Spec.digits b n = Spec.digits b (n / b) ++ [n % b] := by
-  rw [Spec.digits]
+    Der.Spec.digits b n = Der.Spec.digits b (n / b) ++ [n % b] := by
+  rw [Der.Spec.digits]
   simp only [show ¬ (n < b ∨ b < 2) by omega, ↓reduceDIte]
 
-theorem digits_ne_nil (b n : Nat) : Spec.digits b n ≠ [] := by
-  rw [Spec.digits]
+theorem digits_ne_nil (b n : Nat) : Der.Spec.digits b n ≠ [] := by
+  rw [Der.Spec.digits]
   split <;> simp
 
-theorem digits_lt {b : Nat} (hb : 2 ≤ b) (n : Nat) : ∀ d ∈ Spec.digits b n, d < b := by
+theorem digits_lt {b : Nat} (hb : 2 ≤ b) (n : Nat) : ∀ d ∈ Der.Spec.digits b n, d < b := by
   induction n using Nat.strongRecOn with
   | ind n ih =>
     by_cases h : n < b
@@ -129,7 +129,7 @@ theorem digits_lt {b : Nat} (hb : 2 ≤ b) (n : Nat) : ∀ d ∈ Spec.digits b n
 /-- The digits of a number that is not zero start with a digit that is
     not zero. -/
 theorem digits_head {b n : Nat} (hb : 2 ≤ b) (hn : n ≠ 0) :
-    ∃ d ds, Spec.digits b n = d :: ds ∧ d ≠ 0 := by
+    ∃ d ds, Der.Spec.digits b n = d :: ds ∧ d ≠ 0 := by
   induction n using Nat.strongRecOn with
   | ind n ih =>
     by_cases h : n < b
@@ -142,7 +142,7 @@ theorem digits_head {b n : Nat} (hb : 2 ≤ b) (hn : n ≠ 0) :
       exact ⟨d, ds ++ [n % b], by rw [he]; rfl, hd⟩
 
 theorem digitsVal_digits (w : Nat) (hw : 1 ≤ w) (n : Nat) :
-    digitsVal w (Spec.digits (2 ^ w) n) = n := by
+    digitsVal w (Der.Spec.digits (2 ^ w) n) = n := by
   have hb : 2 ≤ 2 ^ w := by
     have := Nat.pow_le_pow_right (by omega : 0 < 2) hw
     simpa using this
@@ -159,7 +159,7 @@ theorem digitsVal_digits (w : Nat) (hw : 1 ≤ w) (n : Nat) :
     single digit zero), are the digits of their value. -/
 theorem digits_digitsVal (w : Nat) (hw : 1 ≤ w) (ds : List Nat) (hne : ds ≠ [])
     (hlt : ∀ d ∈ ds, d < 2 ^ w) (hhead : ds.head hne ≠ 0 ∨ ds.length = 1) :
-    Spec.digits (2 ^ w) (digitsVal w ds) = ds := by
+    Der.Spec.digits (2 ^ w) (digitsVal w ds) = ds := by
   have hb : 2 ≤ 2 ^ w := by
     have := Nat.pow_le_pow_right (by omega : 0 < 2) hw
     simpa using this
@@ -197,13 +197,13 @@ theorem digits_digitsVal (w : Nat) (hw : 1 ≤ w) (ds : List Nat) (hne : ds ≠ 
 /-- The number of digits is at most `k` exactly when the number is below
     the base to the `k`. -/
 theorem digits_length_le (w : Nat) (hw : 1 ≤ w) (n k : Nat) (hk : 1 ≤ k) :
-    (Spec.digits (2 ^ w) n).length ≤ k ↔ n < 2 ^ (w * k) := by
+    (Der.Spec.digits (2 ^ w) n).length ≤ k ↔ n < 2 ^ (w * k) := by
   have hb : 2 ≤ 2 ^ w := by
     have := Nat.pow_le_pow_right (by omega : 0 < 2) hw
     simpa using this
   constructor
   · intro h
-    have hv := digitsVal_lt w (Spec.digits (2 ^ w) n) (digits_lt hb n)
+    have hv := digitsVal_lt w (Der.Spec.digits (2 ^ w) n) (digits_lt hb n)
     rw [digitsVal_digits w hw] at hv
     exact Nat.lt_of_lt_of_le hv (Nat.pow_le_pow_right (by omega) (Nat.mul_le_mul_left _ h))
   · intro h
@@ -227,7 +227,7 @@ theorem digits_length_le (w : Nat) (hw : 1 ≤ w) (n k : Nat) (hk : 1 ≤ k) :
 /-! ## The code's digits -/
 
 theorem toDigitsAux_eq (w : Nat) (hw : 1 ≤ w) (fuel n : Nat) (acc : List Nat) (hn : 0 < n)
-    (hf : n ≤ fuel) : toDigitsAux w fuel n acc = Spec.digits (2 ^ w) n ++ acc := by
+    (hf : n ≤ fuel) : toDigitsAux w fuel n acc = Der.Spec.digits (2 ^ w) n ++ acc := by
   have hb : 2 ≤ 2 ^ w := by
     have := Nat.pow_le_pow_right (by omega : 0 < 2) hw
     simpa using this
@@ -244,7 +244,7 @@ theorem toDigitsAux_eq (w : Nat) (hw : 1 ≤ w) (fuel n : Nat) (acc : List Nat) 
       rw [ih (n / 2 ^ w) _ hq (by omega), digits_of_ge (n := n) hb (by omega), List.append_assoc]
       rfl
 
-theorem toDigits_eq (w : Nat) (hw : 1 ≤ w) (n : Nat) : toDigits w n = Spec.digits (2 ^ w) n := by
+theorem toDigits_eq (w : Nat) (hw : 1 ≤ w) (n : Nat) : toDigits w n = Der.Spec.digits (2 ^ w) n := by
   unfold toDigits
   split
   · rename_i h

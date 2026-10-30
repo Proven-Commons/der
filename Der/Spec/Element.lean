@@ -1,7 +1,7 @@
 /-
   The tree a DER element reads into. Part of the specification: a
-  reviewer approves it with `Spec.lean` and `Spec/Defs.lean`. The code in
-  `Der/` and the definitions in `Spec/Defs.lean` both use it, and it
+  reviewer approves it with `Der/Spec.lean` and `Der/Spec/Defs.lean`. The code in
+  `Der/` and the definitions in `Der/Spec/Defs.lean` both use it, and it
   holds no logic.
 -/
 
@@ -12,7 +12,7 @@ namespace Der
 
     The class can be any number in the type. Table 1 of X.690 has four:
     0 for universal, 1 for application, 2 for context-specific and 3
-    for private. `Spec.Valid` accepts only these four.
+    for private. `Der.Spec.Valid` accepts only these four.
 
     A primitive element holds its contents octets. A constructed element
     holds the elements its contents octets encode, in order. -/
